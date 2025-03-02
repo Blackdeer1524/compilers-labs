@@ -1,0 +1,17 @@
+diff --git a/btpc64.pas b/btpc64.pas
+index 5ddb2f6..3acfe88 100644
+--- a/btpc64.pas
++++ b/btpc64.pas
+@@ -594,8 +594,10 @@ var Num:integer;
+ begin
+  Num:=0;
+  if ('0'<=CurrentChar) and (CurrentChar<='9') then begin
+-  while ('0'<=CurrentChar) and (CurrentChar<='9') do begin
+-   Num:=(Num*10)+(ord(CurrentChar)-ord('0'));
++  while (('0'<=CurrentChar) and (CurrentChar<='9')) or (CurrentChar='_') do begin
++   if (CurrentChar <> '_') then begin
++    Num:=(Num*10)+(ord(CurrentChar)-ord('0'));
++   end;
+    ReadChar;
+   end;
+  end else if CurrentChar='$' then begin

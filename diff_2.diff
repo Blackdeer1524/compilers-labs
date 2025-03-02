@@ -1,0 +1,13 @@
+diff --git a/btpc64.pas b/btpc64.pas
+index 3acfe88..daa6239 100644
+--- a/btpc64.pas
++++ b/btpc64.pas
+@@ -62,7 +62,7 @@ program BTPC; { BeRoTinyPascalCompiler }
+  {$apptype console}
+ {$endif}
+ 
+-const MaximalCodeSize=262144;
++const MaximalCodeSize=262_144;
+       MaximalIdentifiers=512;
+       MaximalTypes=32;
+       MaximalList=10;
