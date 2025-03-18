@@ -1,21 +1,3 @@
-# $ is equivalent to
-# ! is equivalent to
-# : is equivalent to
-# space is equivalent to
-# a is equivalent to
-# l is equivalent to
-# c is equivalent to
-# e is equivalent to
-# n is equivalent to
-# # is equivalent to
-# 0 is equivalent to 1
-# 1 is equivalent to
-# b is equivalent to d
-# d is equivalent to
-# NEW_LINE is equivalent to
-# SLASH is equivalent to
-
-
 from dataclasses import dataclass
 from enum import Enum, IntEnum, auto
 import sys
