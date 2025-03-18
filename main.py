@@ -17,10 +17,9 @@
 
 
 from dataclasses import dataclass
-from email.policy import default
 from enum import Enum, IntEnum, auto
 import sys
-from typing import Generator, Iterator, Literal, Optional, TextIO
+from typing import Iterator, Literal, Optional, TextIO
 
 
 State = Literal[
@@ -35,7 +34,6 @@ State = Literal[
     "15 16",
     "21",
     "TRAP",
-    "16",
     "16 17",
     "12 19",
     "13 19",
@@ -207,28 +205,27 @@ class TextWithPosition(Text):
 
 class Automaton:
     # fmt: off
-    DELTA: dict[State, list[State]] = {
-        "0 2 7 18 20" :["1","3","22","5 6","5 6","8 19","19","11 19","19","19","15 16","21","21","19","19","TRAP"],
-        "1" :["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "3" :["TRAP","4","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "22" :["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "5 6" :["TRAP","TRAP","TRAP","5 6","5 6","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "8 19" :["TRAP","TRAP","TRAP","TRAP","TRAP","19","9 19","19","19","19","TRAP","19","19","19","19","TRAP"],
-        "19" :["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","19","19","19","TRAP"],
-        "11 19" :["TRAP","TRAP","TRAP","TRAP","TRAP","19","12 19","19","19","19","TRAP","19","19","19","19","TRAP"],
-        "15 16" :["TRAP","15 16","15 16","15 16","16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","16 17"],
-        "21" :["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","21","21","TRAP","TRAP","TRAP"],
-        "TRAP" :["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "16" :["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "16 17" :["TRAP","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","TRAP"],
-        "12 19" :["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","13 19","19","TRAP","19","19","19","19","TRAP"],
-        "13 19" :["TRAP","TRAP","TRAP","TRAP","TRAP","14 19","19","19","19","19","TRAP","19","19","19","19","TRAP"],
-        "14 19" :["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19 23","TRAP","19","19","19","19","TRAP"],
-        "19 23" :["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","19","19","19","TRAP"],
-        "9 19" :["TRAP","TRAP","TRAP","TRAP","TRAP","19","10 19","19","19","19","TRAP","19","19","19","19","TRAP"],
-        "10 19" :["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","19","19","19","TRAP"],
-        "4" :["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"]
-} 
+    DELTA: dict[State, list[State]] =  {
+        "0 2 7 18 20":["1","3","22","5 6","5 6","8 19","19","11 19","19","19","15 16","21","19","TRAP"],
+        "1":["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "3":["TRAP","4","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "22":["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "5 6":["TRAP","TRAP","TRAP","5 6","5 6","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "8 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","9 19","19","19","19","TRAP","19","19","TRAP"],
+        "19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","19","TRAP"],
+        "11 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","12 19","19","19","19","TRAP","19","19","TRAP"],
+        "15 16":["TRAP","15 16","15 16","15 16","TRAP","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","16 17"],
+        "21":["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","21","TRAP","TRAP"],
+        "TRAP":["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "16 17":["TRAP","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","TRAP"],
+        "12 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","13 19","19","TRAP","19","19","TRAP"],
+        "13 19":["TRAP","TRAP","TRAP","TRAP","TRAP","14 19","19","19","19","19","TRAP","19","19","TRAP"],
+        "14 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19 23","TRAP","19","19","TRAP"],
+        "19 23":["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","19","TRAP"],
+        "9 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","10 19","19","19","19","TRAP","19","19","TRAP"],
+        "10 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","19","TRAP"],
+        "4":["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+    }
     # fmt: on
 
     @staticmethod
@@ -246,7 +243,6 @@ class Automaton:
             case "15 16": return Domain.COMMENT
             case "21": return Domain.DIGIT
             case "TRAP": return None
-            case "16": return Domain.COMMENT
             case "16 17": return Domain.COMMENT
             case "12 19": return Domain.IDENT
             case "13 19": return Domain.IDENT
@@ -324,25 +320,27 @@ class Lexer:
     def _build_token(
         self, domain: Domain, attr: str, start: Position
     ) -> Optional[Token]:
+        cur_pos = self._pos_text.position()
+        prev_pos = Position(cur_pos.row, cur_pos.col - 1)
         match domain:
             case Domain.EOF:
-                return EOF(start, self._pos_text.position())
+                return EOF(start, prev_pos)
             case Domain.OPERATOR_BANG:
-                return OperatorBang(start, self._pos_text.position())
+                return OperatorBang(start, prev_pos)
             case Domain.OPERATOR_COLON:
-                return OperatorColon(start, self._pos_text.position())
+                return OperatorColon(start, prev_pos)
             case Domain.SPACES:
                 return None
             case Domain.DIGIT:
-                return Digit(start, self._pos_text.position(), int(attr))
+                return Digit(start, prev_pos, int(attr))
             case Domain.KEYWORD_CLEAN:
-                return KeywordClean(start, self._pos_text.position())
+                return KeywordClean(start, prev_pos)
             case Domain.KEYWORD_ALL:
-                return KeywordAll(start, self._pos_text.position())
+                return KeywordAll(start, prev_pos)
             case Domain.COMMENT:
-                return Comment(start, self._pos_text.position(), attr[1:].rstrip("\n"))
+                return Comment(start, prev_pos, attr[1:].rstrip("\n"))
             case Domain.IDENT:
-                return Ident(start, self._pos_text.position(), attr)
+                return Ident(start, prev_pos, attr)
 
     def __iter__(self) -> Iterator[Token | LexerError]:
         while True:
@@ -364,13 +362,12 @@ class Lexer:
                 if self._recovering:
                     self._pos_text.advance()
                     return None
-                self._recovering = False
+                self._recovering = True
                 err = LexerError(
                     start_pos,
                     self._pos_text.position(),
                     "Unexpected symbol",
                 )
-                self._pos_text.advance()
                 return err
             if self._automaton.peek_is_trap(st):
                 domain_opt: Optional[Domain] = self._automaton.get_domain()
@@ -378,10 +375,10 @@ class Lexer:
                     if self._recovering:
                         self._pos_text.advance()
                         return None
+                    self._recovering = True
                     err = LexerError(
                         start_pos, self._pos_text.position(), "Unexpected symbol"
                     )
-                    self._pos_text.advance()
                     return err
                 token = self._build_token(domain_opt, pref, start_pos)
                 self._recovering = False
@@ -400,4 +397,6 @@ def main():
 
 
 if __name__ == "__main__":
+    for k, i in Automaton.DELTA.items():
+        assert len(i) == 14, (k, i)
     main()
