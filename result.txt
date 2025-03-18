@@ -1,0 +1,129 @@
+Table: 
+ |             |      $      |      !      |      :      |    space    |  NEW_LINE   |      a      |      l      |      c      |      e      |      n      |      #      |      0      |      1      |      b      |      d      |    SLASH    | 
+ | 0 2 7 18 20 |      1      |      3      |      4      |     5 6     |     5 6     |    8 19     |     19      |    11 19    |     19      |     19      |    15 16    |     21      |     21      |     19      |     19      |    TRAP     | 
+ |      1      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |      3      |    TRAP     |      4      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |      4      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |     5 6     |    TRAP     |    TRAP     |    TRAP     |     5 6     |     5 6     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |    8 19     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |    9 19     |     19      |     19      |     19      |    TRAP     |     19      |     19      |     19      |     19      |    TRAP     | 
+ |     19      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |     19      |     19      |     19      |     19      |    TRAP     |     19      |     19      |     19      |     19      |    TRAP     | 
+ |    11 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |    12 19    |     19      |     19      |     19      |    TRAP     |     19      |     19      |     19      |     19      |    TRAP     | 
+ |    15 16    |    TRAP     |    15 16    |    15 16    |    15 16    |     16      |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    16 17    | 
+ |     21      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     21      |     21      |    TRAP     |    TRAP     |    TRAP     | 
+ |             |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |     16      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |    16 17    |    TRAP     |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    TRAP     | 
+ |    12 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |     19      |     19      |    13 19    |     19      |    TRAP     |     19      |     19      |     19      |     19      |    TRAP     | 
+ |    13 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    14 19    |     19      |     19      |     19      |     19      |    TRAP     |     19      |     19      |     19      |     19      |    TRAP     | 
+ |    14 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |     19      |     19      |     19      |    10 19    |    TRAP     |     19      |     19      |     19      |     19      |    TRAP     | 
+ |    10 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |     19      |     19      |     19      |     19      |    TRAP     |     19      |     19      |     19      |     19      |    TRAP     | 
+ |    9 19     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |    10 19    |     19      |     19      |     19      |    TRAP     |     19      |     19      |     19      |     19      |    TRAP     | 
+
+$ is equivalent to 
+! is equivalent to 
+: is equivalent to 
+space is equivalent to 
+NEW_LINE is equivalent to 
+a is equivalent to 
+l is equivalent to 
+c is equivalent to 
+e is equivalent to 
+n is equivalent to 
+# is equivalent to 
+0 is equivalent to 1
+1 is equivalent to 
+b is equivalent to d
+d is equivalent to 
+SLASH is equivalent to 
+
+NEW Table: 
+ |             |      $      |      !      |      :      |    space    |  NEW_LINE   |      a      |      l      |      c      |      e      |      n      |      #      |    DIGIT    |  OTHER_CHAR |    SLASH    | 
+ | 0 2 7 18 20 |      1      |      3      |      4      |     5 6     |     5 6     |    8 19     |     19      |    11 19    |     19      |     19      |    15 16    |     21      |     19      |    TRAP     | 
+ |      1      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |      3      |    TRAP     |      4      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |      4      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |     5 6     |    TRAP     |    TRAP     |    TRAP     |     5 6     |     5 6     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |    8 19     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |    9 19     |     19      |     19      |     19      |    TRAP     |     19      |     19      |    TRAP     | 
+ |     19      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |     19      |     19      |     19      |     19      |    TRAP     |     19      |     19      |    TRAP     | 
+ |    11 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |    12 19    |     19      |     19      |     19      |    TRAP     |     19      |     19      |    TRAP     | 
+ |    15 16    |    TRAP     |    15 16    |    15 16    |    15 16    |     16      |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    16 17    | 
+ |     21      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     21      |    TRAP     |    TRAP     | 
+ |             |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |     16      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
+ |    16 17    |    TRAP     |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    TRAP     | 
+ |    12 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |     19      |     19      |    13 19    |     19      |    TRAP     |     19      |     19      |    TRAP     | 
+ |    13 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    14 19    |     19      |     19      |     19      |     19      |    TRAP     |     19      |     19      |    TRAP     | 
+ |    14 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |     19      |     19      |     19      |    10 19    |    TRAP     |     19      |     19      |    TRAP     | 
+ |    10 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |     19      |     19      |     19      |     19      |    TRAP     |     19      |     19      |    TRAP     | 
+ |    9 19     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |    10 19    |     19      |     19      |     19      |    TRAP     |     19      |     19      |    TRAP     | 
+
+
+digraph {
+    rankdir = LR
+    0 [label = "[0 2 7 18 20]", shape = circle]
+    1 [label = "[1]", shape = doublecircle]
+    2 [label = "[3]", shape = circle]
+    3 [label = "[4]", shape = doublecircle]
+    4 [label = "[5 6]", shape = doublecircle]
+    5 [label = "[8 19]", shape = doublecircle]
+    6 [label = "[19]", shape = doublecircle]
+    7 [label = "[11 19]", shape = doublecircle]
+    8 [label = "[15 16]", shape = doublecircle]
+    9 [label = "[21]", shape = doublecircle]
+    10 [label = "[]", shape = circle]
+    11 [label = "[16]", shape = doublecircle]
+    12 [label = "[16 17]", shape = doublecircle]
+    13 [label = "[12 19]", shape = doublecircle]
+    14 [label = "[13 19]", shape = doublecircle]
+    15 [label = "[14 19]", shape = doublecircle]
+    16 [label = "[10 19]", shape = doublecircle]
+    17 [label = "[9 19]", shape = doublecircle]
+    0 -> 10 [label = "SLASH"]
+    0 -> 9 [label = "0, 1"]
+    0 -> 8 [label = "#"]
+    0 -> 7 [label = "c"]
+    0 -> 6 [label = "l, e, n, b, d"]
+    0 -> 5 [label = "a"]
+    0 -> 4 [label = "space, NEW_LINE"]
+    0 -> 3 [label = ":"]
+    0 -> 2 [label = "!"]
+    0 -> 1 [label = "$"]
+    1 -> 10 [label = "$, !, :, space, NEW_LINE, a, l, c, e, n, #, 0, 1, b, d, SLASH"]
+    2 -> 3 [label = "!"]
+    2 -> 10 [label = "$, :, space, NEW_LINE, a, l, c, e, n, #, 0, 1, b, d, SLASH"]
+    3 -> 10 [label = "$, !, :, space, NEW_LINE, a, l, c, e, n, #, 0, 1, b, d, SLASH"]
+    4 -> 4 [label = "space, NEW_LINE"]
+    4 -> 10 [label = "$, !, :, a, l, c, e, n, #, 0, 1, b, d, SLASH"]
+    5 -> 17 [label = "l"]
+    5 -> 6 [label = "a, c, e, n, 0, 1, b, d"]
+    5 -> 10 [label = "$, !, :, space, NEW_LINE, #, SLASH"]
+    6 -> 6 [label = "a, l, c, e, n, 0, 1, b, d"]
+    6 -> 10 [label = "$, !, :, space, NEW_LINE, #, SLASH"]
+    7 -> 13 [label = "l"]
+    7 -> 6 [label = "a, c, e, n, 0, 1, b, d"]
+    7 -> 10 [label = "$, !, :, space, NEW_LINE, #, SLASH"]
+    8 -> 12 [label = "SLASH"]
+    8 -> 11 [label = "NEW_LINE"]
+    8 -> 8 [label = "!, :, space, a, l, c, e, n, #, 0, 1, b, d"]
+    8 -> 10 [label = "$"]
+    9 -> 9 [label = "0, 1"]
+    9 -> 10 [label = "$, !, :, space, NEW_LINE, a, l, c, e, n, #, b, d, SLASH"]
+    10 -> 10 [label = "$, !, :, space, NEW_LINE, a, l, c, e, n, #, 0, 1, b, d, SLASH"]
+    11 -> 10 [label = "$, !, :, space, NEW_LINE, a, l, c, e, n, #, 0, 1, b, d, SLASH"]
+    12 -> 8 [label = "!, :, space, NEW_LINE, a, l, c, e, n, #, 0, 1, b, d"]
+    12 -> 10 [label = "$, SLASH"]
+    13 -> 14 [label = "e"]
+    13 -> 6 [label = "a, l, c, n, 0, 1, b, d"]
+    13 -> 10 [label = "$, !, :, space, NEW_LINE, #, SLASH"]
+    14 -> 6 [label = "l, c, e, n, 0, 1, b, d"]
+    14 -> 15 [label = "a"]
+    14 -> 10 [label = "$, !, :, space, NEW_LINE, #, SLASH"]
+    15 -> 16 [label = "n"]
+    15 -> 6 [label = "a, l, c, e, 0, 1, b, d"]
+    15 -> 10 [label = "$, !, :, space, NEW_LINE, #, SLASH"]
+    16 -> 6 [label = "a, l, c, e, n, 0, 1, b, d"]
+    16 -> 10 [label = "$, !, :, space, NEW_LINE, #, SLASH"]
+    17 -> 16 [label = "l"]
+    17 -> 6 [label = "a, c, e, n, 0, 1, b, d"]
+    17 -> 10 [label = "$, !, :, space, NEW_LINE, #, SLASH"]
+}
