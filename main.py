@@ -10,19 +10,19 @@ State = Literal[
     "3",
     "22",
     "5 6",
-    "8 19",
-    "19",
     "11 19",
+    "19",
+    "8 19",
     "15 16",
     "21",
     "TRAP",
     "16 17",
+    "9 19",
+    "10 19",
     "12 19",
     "13 19",
     "14 19",
     "19 23",
-    "9 19",
-    "10 19",
     "4",
 ]
 
@@ -117,14 +117,15 @@ class SymbolType(IntEnum):
     COLON = auto()
     SPACE = auto()
     NEW_LINE = auto()
-    A = auto()
-    L = auto()
     C = auto()
+    L = auto()
+    A = auto()
     E = auto()
     N = auto()
     HASH = auto()
     DIGIT = auto()
     OTHER_CHARS = auto()
+    ALPHABET = auto()
     SLASH = auto()
 
 
@@ -188,25 +189,25 @@ class TextWithPosition(Text):
 class Automaton:
     # fmt: off
     DELTA: dict[State, list[State]] =  {
-        "0 2 7 18 20":["1","3","22","5 6","5 6","8 19","19","11 19","19","19","15 16","21","19","TRAP"],
-        "1":["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "3":["TRAP","4","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "22":["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "5 6":["TRAP","TRAP","TRAP","5 6","5 6","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "8 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","9 19","19","19","19","TRAP","19","19","TRAP"],
-        "19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","19","TRAP"],
-        "11 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","12 19","19","19","19","TRAP","19","19","TRAP"],
-        "15 16":["TRAP","15 16","15 16","15 16","TRAP","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","16 17"],
-        "21":["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","21","TRAP","TRAP"],
-        "TRAP":["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "16 17":["TRAP","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","TRAP"],
-        "12 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","13 19","19","TRAP","19","19","TRAP"],
-        "13 19":["TRAP","TRAP","TRAP","TRAP","TRAP","14 19","19","19","19","19","TRAP","19","19","TRAP"],
-        "14 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19 23","TRAP","19","19","TRAP"],
-        "19 23":["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","19","TRAP"],
-        "9 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","10 19","19","19","19","TRAP","19","19","TRAP"],
-        "10 19":["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","19","TRAP"],
-        "4":["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "0 2 7 18 20": ["1","3","22","5 6","5 6","11 19","19","19","8 19","19","15 16","21","TRAP","19","TRAP"],
+        "1": ["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "3": ["TRAP","4","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "22": ["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "5 6": ["TRAP","TRAP","TRAP","5 6","5 6","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "11 19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","12 19","19","19","19","TRAP","19","TRAP","19","TRAP"],
+        "19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","TRAP","19","TRAP"],
+        "8 19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","9 19","19","19","19","TRAP","19","TRAP","19","TRAP"],
+        "15 16": ["TRAP","15 16","15 16","15 16","TRAP","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","16 17"],
+        "21": ["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","21","TRAP","TRAP","TRAP"],
+        "TRAP": ["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
+        "16 17": ["TRAP","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","TRAP"],
+        "9 19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","10 19","19","19","19","TRAP","19","TRAP","19","TRAP"],
+        "10 19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","TRAP","19","TRAP"],
+        "12 19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","13 19","19","19","TRAP","19","TRAP","19","TRAP"],
+        "13 19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","14 19","19","TRAP","19","TRAP","19","TRAP"],
+        "14 19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19 23","TRAP","19","TRAP","19","TRAP"],
+        "19 23": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","TRAP","19","TRAP"],
+        "4": ["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"]
     }
     # fmt: on
 
@@ -236,7 +237,7 @@ class Automaton:
         # fmt: on
 
     @staticmethod
-    def classify_symbol(s: Optional[str]) -> Optional[SymbolType]:
+    def classify_symbol(s: Optional[str]) -> SymbolType:
         if s is None:
             return SymbolType.EOF
         elif s == "!":
@@ -264,8 +265,8 @@ class Automaton:
         elif s == "\\":
             return SymbolType.SLASH
         elif s.isalpha():
-            return SymbolType.OTHER_CHARS
-        return None
+            return SymbolType.ALPHABET
+        return SymbolType.OTHER_CHARS
 
     def __init__(self):
         self._state: State = START_STATE
@@ -339,18 +340,7 @@ class Lexer:
         pref = ""
         while True:
             s_opt: Optional[str] = self._pos_text.peek()
-            st: Optional[SymbolType] = Automaton.classify_symbol(s_opt)
-            if st is None:
-                if self._recovering:
-                    self._pos_text.advance()
-                    return None
-                self._recovering = True
-                err = LexerError(
-                    start_pos,
-                    self._pos_text.position(),
-                    "Unexpected symbol",
-                )
-                return err
+            st: SymbolType = Automaton.classify_symbol(s_opt)
             if self._automaton.peek_is_trap(st):
                 domain_opt: Optional[Domain] = self._automaton.get_domain()
                 if domain_opt is None:
@@ -379,6 +369,4 @@ def main():
 
 
 if __name__ == "__main__":
-    for k, i in Automaton.DELTA.items():
-        assert len(i) == 14, (k, i)
     main()
