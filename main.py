@@ -35,7 +35,7 @@ class Domain(Enum):
     OPERATOR_BANG = auto()
     OPERATOR_COLON = auto()
     SPACES = auto()
-    DIGIT = auto()
+    NUMBER = auto()
     KEYWORD_CLEAN = auto()
     KEYWORD_ALL = auto()
     COMMENT = auto()
@@ -75,7 +75,7 @@ class Spaces(Segment):
 
 
 @dataclass(frozen=True)
-class Digit(Segment):
+class Number(Segment):
     value: int
 
 
@@ -103,7 +103,7 @@ Token = (
     EOF
     | OperatorBang
     | OperatorColon
-    | Digit
+    | Number
     | KeywordClean
     | KeywordAll
     | Comment
@@ -224,7 +224,7 @@ class Automaton:
             case "19": return Domain.IDENT
             case "11 19": return Domain.IDENT
             case "15 16": return Domain.COMMENT
-            case "21": return Domain.DIGIT
+            case "21": return Domain.NUMBER
             case "TRAP": return None
             case "16 17": return Domain.COMMENT
             case "12 19": return Domain.IDENT
@@ -318,8 +318,8 @@ class Lexer:
                 return OperatorColon(start, pos)
             case Domain.SPACES:
                 return None
-            case Domain.DIGIT:
-                return Digit(start, pos, int(attr))
+            case Domain.NUMBER:
+                return Number(start, pos, int(attr))
             case Domain.KEYWORD_CLEAN:
                 return KeywordClean(start, pos)
             case Domain.KEYWORD_ALL:
