@@ -200,7 +200,7 @@ class Automaton:
         "15 16": ["TRAP","15 16","15 16","15 16","TRAP","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","16 17"],
         "21": ["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","21","TRAP","TRAP","TRAP"],
         "TRAP": ["TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP","TRAP"],
-        "16 17": ["TRAP","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","TRAP"],
+        "16 17": ["TRAP","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","15 16","16 17"],
         "9 19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","10 19","19","19","19","TRAP","19","TRAP","19","TRAP"],
         "10 19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","19","19","19","TRAP","19","TRAP","19","TRAP"],
         "12 19": ["TRAP","TRAP","TRAP","TRAP","TRAP","19","19","13 19","19","19","TRAP","19","TRAP","19","TRAP"],
@@ -301,64 +301,106 @@ class Lexer:
         self._recovering = False
 
     def _build_token(
-        self, domain: Domain, attr: str, start: Position
+        self, domain: Domain, attr: str, start: Position, end: Optional[Position] = None
     ) -> Optional[Token]:
-        cur_pos = self._pos_text.position()
-        prev_pos = Position(cur_pos.row, cur_pos.col - 1)
+        if end is None:
+            cur_pos = self._pos_text.position()
+            pos = Position(cur_pos.row, cur_pos.col - 1)
+        else:
+            pos = end
+
         match domain:
             case Domain.EOF:
-                return EOF(start, prev_pos)
+                return EOF(start, pos)
             case Domain.OPERATOR_BANG:
-                return OperatorBang(start, prev_pos)
+                return OperatorBang(start, pos)
             case Domain.OPERATOR_COLON:
-                return OperatorColon(start, prev_pos)
+                return OperatorColon(start, pos)
             case Domain.SPACES:
                 return None
             case Domain.DIGIT:
-                return Digit(start, prev_pos, int(attr))
+                return Digit(start, pos, int(attr))
             case Domain.KEYWORD_CLEAN:
-                return KeywordClean(start, prev_pos)
+                return KeywordClean(start, pos)
             case Domain.KEYWORD_ALL:
-                return KeywordAll(start, prev_pos)
+                return KeywordAll(start, pos)
             case Domain.COMMENT:
-                return Comment(start, prev_pos, attr[1:].rstrip("\n"))
+                return Comment(start, pos, attr[1:].rstrip("\n"))
             case Domain.IDENT:
-                return Ident(start, prev_pos, attr)
+                return Ident(start, pos, attr)
 
     def __iter__(self) -> Iterator[Token | LexerError]:
         while True:
-            res = self._parse_prefix()
+            (res, err) = self._parse_prefix()
             if res is None:
+                if err is not None:
+                    yield err
                 continue
+
             yield res
+            if err is not None:
+                yield err
+
             if isinstance(res, EOF):
                 return
 
-    def _parse_prefix(self) -> Optional[Token] | LexerError:
+    def _parse_prefix(self) -> tuple[Optional[Token], Optional[LexerError]]:
         self._automaton.reset()
-        start_pos = self._pos_text.position()
         pref = ""
+
+        start_pos = self._pos_text.position()
+
+        valid_pref_len = 0
+        last_seen_final_pos: Optional[Position] = None
+        last_domain: Optional[Domain] = None
+        error_start_pos = start_pos
+
         while True:
             s_opt: Optional[str] = self._pos_text.peek()
             st: SymbolType = Automaton.classify_symbol(s_opt)
-            if self._automaton.peek_is_trap(st):
-                domain_opt: Optional[Domain] = self._automaton.get_domain()
-                if domain_opt is None:
-                    if self._recovering:
-                        self._pos_text.advance()
-                        return None
-                    self._recovering = True
-                    err = LexerError(
-                        start_pos, self._pos_text.position(), "Unexpected symbol"
-                    )
-                    return err
+
+            # Если *следующее* (НЕ текущее) - НЕ ловушка, то продолжаем
+            if not self._automaton.peek_is_trap(st):
+                assert s_opt is not None
+                pref += s_opt
+                self._automaton.transition(st)
+
+                cur_domain = self._automaton.get_domain()
+                if cur_domain is not None:
+                    valid_pref_len = len(pref)
+                    last_domain = cur_domain
+                    last_seen_final_pos = self._pos_text.position()
+
+                self._pos_text.advance()
+                error_start_pos = self._pos_text.position()
+                continue
+
+            domain_opt: Optional[Domain] = self._automaton.get_domain()
+            if domain_opt is not None:
                 token = self._build_token(domain_opt, pref, start_pos)
                 self._recovering = False
-                return token
-            assert s_opt is not None
-            pref += s_opt
-            self._pos_text.advance()
-            self._automaton.transition(st)
+                return token, None
+
+            if self._recovering:
+                self._pos_text.advance()
+                return None, None
+
+            self._recovering = True
+            err = LexerError(
+                error_start_pos, self._pos_text.position(), "Unexpected symbol"
+            )
+
+            if valid_pref_len == 0:
+                return None, err
+
+            assert last_domain is not None
+            t = self._build_token(
+                last_domain,
+                pref[:valid_pref_len],
+                start_pos,
+                last_seen_final_pos,
+            )
+            return t, err
 
 
 def main():

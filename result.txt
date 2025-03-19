@@ -11,7 +11,7 @@ Table:
  |    15 16    |    TRAP     |    15 16    |    15 16    |    15 16    |    TRAP     |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    16 17    | 
  |     21      |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     21      |    TRAP     |    TRAP     |    TRAP     | 
  |             |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     | 
- |    16 17    |    TRAP     |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    TRAP     | 
+ |    16 17    |    TRAP     |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    15 16    |    16 17    | 
  |    9 19     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |    10 19    |     19      |     19      |     19      |    TRAP     |     19      |    TRAP     |     19      |    TRAP     | 
  |    10 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |     19      |     19      |     19      |     19      |    TRAP     |     19      |    TRAP     |     19      |    TRAP     | 
  |    12 19    |    TRAP     |    TRAP     |    TRAP     |    TRAP     |    TRAP     |     19      |     19      |    13 19    |     19      |     19      |    TRAP     |     19      |    TRAP     |     19      |    TRAP     | 
@@ -74,6 +74,7 @@ digraph {
     8 -> 11 [label = "SLASH"]
     8 -> 8 [label = "!, :, SPACE, c, l, e, a, n, #, DIGIT, OTHER_CHAR, ALPHABET"]
     9 -> 9 [label = "DIGIT"]
+    11 -> 11 [label = "SLASH"]
     11 -> 8 [label = "!, :, SPACE, NEW_LINE, c, l, e, a, n, #, DIGIT, OTHER_CHAR, ALPHABET"]
     12 -> 13 [label = "l"]
     12 -> 6 [label = "c, e, a, n, DIGIT, ALPHABET"]
