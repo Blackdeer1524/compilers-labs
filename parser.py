@@ -224,67 +224,102 @@ class Analyzer:
         self.scanner = s
 
     def parse(self):
-        
-        depth_siblings: DefaultDict[int, list[Analyzer.EPSILON_T | Analyzer.TERMINALS | Analyzer.NON_TERMINALS]] = defaultdict(lambda: [])
+        depth_siblings: DefaultDict[int, list[str]] = defaultdict(lambda: [])
 
-        token_stream = iter(self.scanner)
-        # TODO: ОБНОВЛЯЙ ТОКЕН!!!!
-        token = next(token_stream)
-        
         graph = "digraph {\n"
-        c = 0
-        INIT_NODE_NAME = f"E({c})"
-        c += 1
-        graph += f"\t{INIT_NODE_NAME}\n"
-        d: Deque[tuple[Analyzer.EPSILON_T | Analyzer.TERMINALS | Analyzer.NON_TERMINALS, str, int]] = deque([("E", INIT_NODE_NAME, 0)])
-        while True:
-            (top, node_name, depth) = d.popleft()
-            depth_siblings[depth].append(top)
-            match top:
-                case "n":
-                    if type(token) != Identifier:
-                        raise RuntimeError(f"expected Identifier, but {type(token)} found")
-                case "(":
-                    if type(token) != LeftParen:
-                        raise RuntimeError(f"expected LeftParen, but {type(token)} found")
-                case "*":
-                    if type(token) != Mult:
-                        raise RuntimeError(f"expected Mult, but {type(token)} found")
-                case "+":
-                    if type(token) != Plus:
-                        raise RuntimeError(f"expected Plus, but {type(token)} found")
-                case ")":
-                    if type(token) != RightParen:
-                        raise RuntimeError(f"expected RightParen, but {type(token)} found")
-                case "$":
-                    if type(token) != EOF:
-                        raise RuntimeError(f"expected EOF, but {type(token)} found")
-                    break
-                case "EPSILON": 
-                    continue
-                case non_terminal:
-                    expected = Analyzer._table[non_terminal]
-                    match token:
-                        case Plus() | Mult() | LeftParen() | RightParen() | Identifier() | EOF():
-                            rule = expected[type(token)]
-                            if len(rule) == 0:
-                                raise NotImplementedError("throw an error indicating rule violation")
+        c = 1
+        INIT_NODE_NAME = f'"E[{c}]"'
 
-                            for i in reversed(rule):
-                                child_name = f"{i}({c})"
-                                graph += f"\t{node_name}->{child_name}\n"
-                                d.appendleft((i, child_name, depth + 1))
-                                c += 1
-                        case ScanError():
-                            raise NotImplementedError("handle scanner errors")
+        d: Deque[
+            tuple[
+                Analyzer.EPSILON_T | Analyzer.TERMINALS | Analyzer.NON_TERMINALS,
+                str,
+                int,
+            ]
+        ] = deque([("E", INIT_NODE_NAME, 0)])
+        for token in self.scanner:
+            if len(d) == 0:
+                raise RuntimeError(
+                    "stack is exhausted, but there are still tokens left!"
+                )
+            while len(d) > 0:
+                (top, node_name, depth) = d.popleft()
+                depth_siblings[depth].append(node_name)
+                match top:
+                    case "n":
+                        if type(token) != Identifier:
+                            raise RuntimeError(
+                                f"expected Identifier, but {type(token)} found"
+                            )
+                        break
+                    case "(":
+                        if type(token) != LeftParen:
+                            raise RuntimeError(
+                                f"expected LeftParen, but {type(token)} found"
+                            )
+                        break
+                    case "*":
+                        if type(token) != Mult:
+                            raise RuntimeError(
+                                f"expected Mult, but {type(token)} found"
+                            )
+                        break
+                    case "+":
+                        if type(token) != Plus:
+                            raise RuntimeError(
+                                f"expected Plus, but {type(token)} found"
+                            )
+                        break
+                    case ")":
+                        if type(token) != RightParen:
+                            raise RuntimeError(
+                                f"expected RightParen, but {type(token)} found"
+                            )
+                        break
+                    case "$":
+                        if type(token) != EOF:
+                            raise RuntimeError(f"expected EOF, but {type(token)} found")
+                        break
+                    case "EPSILON":
+                        continue
+                    case non_terminal:
+                        expected = Analyzer._table[non_terminal]
+                        match token:
+                            case (
+                                Plus()
+                                | Mult()
+                                | LeftParen()
+                                | RightParen()
+                                | Identifier()
+                                | EOF()
+                            ):
+                                rule = expected[type(token)]
+                                if len(rule) == 0:
+                                    raise RuntimeError(f"unexpected token: {token}")
+
+                                for i, v in enumerate(reversed(rule)):
+                                    child_name = f'"{v}[{c + len(rule) - i}]"'
+                                    graph += f"\t{node_name}->{child_name}\n"
+                                    d.appendleft((v, child_name, depth + 1))
+                                c += len(rule)
+                            case ScanError():
+                                raise RuntimeError(f"scanner error: {token}")
+
+        for _, v in depth_siblings.items():
+            if len(v) < 2:
+                continue
+            graph += "\t{ rank=same;"
+            graph += f"{' -> '.join(v)}"
+            graph += " [style=invis] }\n"
+
         graph += "}"
-        print(graph)
+        return graph
 
 
 def main():
     s = Scanner(open("./test.txt"))
     a = Analyzer(s)
-    a.parse()
+    print(a.parse())
 
 
 if __name__ == "__main__":

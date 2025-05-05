@@ -1,0 +1,1 @@
+python parser.py < test.txt | xclip -selection clipboard
