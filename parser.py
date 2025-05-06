@@ -3,6 +3,16 @@ from pprint import pprint
 from typing import DefaultDict, Deque, Generator, Literal, Optional, TextIO
 from dataclasses import dataclass
 
+"""
+S         ::= "`asiom"? NT "`is" RULE_OPT ("`or" RULE_OPT)* "`end" S | 𝓔
+RULE_OPT  ::= RULE | "`epsilon" 
+RULE      ::= "(" RULE ")" | RULE_ITEM RULE_TAIL
+RULE_TAIL ::= RULE | 𝓔
+RULE_ITEM ::= T | NT
+NT        ::= [a-zA-Z_] [a-zA-Z0-9_]*
+T         ::= "\"" (.+)? "\""
+"""
+
 
 @dataclass(frozen=True)
 class Position:
@@ -37,6 +47,9 @@ class Segment:
     end: Position
 
 
+# ================= Terminals =================
+
+
 @dataclass(frozen=True)
 class LeftParen(Segment): ...
 
@@ -46,15 +59,30 @@ class RightParen(Segment): ...
 
 
 @dataclass(frozen=True)
-class Identifier(Segment): ...
+class Identifier(Segment):
+    value: str
+
+
+# ================= Keywords ===================
 
 
 @dataclass(frozen=True)
-class Plus(Segment): ...
+class Axiom(Segment): ...
 
 
 @dataclass(frozen=True)
-class Mult(Segment): ...
+class Is(Segment): ...
+
+
+@dataclass(frozen=True)
+class Or(Segment): ...
+
+
+@dataclass(frozen=True)
+class End(Segment): ...
+
+
+# ============================================
 
 
 @dataclass
@@ -67,7 +95,9 @@ class ScanError:
     pos: Position
 
 
-Token = Plus | Mult | LeftParen | RightParen | Identifier | EOF
+Keyword = Axiom | End | Is | Or
+
+Token = LeftParen | RightParen | Identifier | Keyword | EOF
 
 
 class Scanner:
@@ -107,6 +137,29 @@ class Scanner:
             self._col += 1
             self._text.advance()
 
+    def parse_keyword(self):
+        cur = self._text.peek()
+        assert cur == "`"
+        self._text.advance()
+
+    def find_whitespace(self):
+        while True:
+            cur = self._text.peek()
+            if cur is None or cur.isspace():
+                break
+            self._advance()
+
+    def assert_string(self, target: str):
+        for i in range(len(target)):
+            cur = self._text.peek()
+            if cur != target[i]:
+                return False
+            self._text.advance()
+        next = self._text.peek()
+        if next is not None and not next.isspace():
+            return False
+        return True
+
     def __iter__(self) -> Generator[Token | ScanError, None, None]:
         errored = False
         while True:
@@ -115,40 +168,70 @@ class Scanner:
             if cur is None:
                 yield EOF()
                 return
-
-            if cur == "n":
-                p = self.position()
+            elif cur == "`":
+                errored = False  # В случае ошибки мы всё равно восстановимся
+                start_p = self.position()
                 self._advance()
-                end_p = self.position()
-                yield Identifier(p, end_p)
-                errored = False
-                continue
+                cur = self._text.peek()
+                if cur == "a":
+                    if not self.assert_string("axiom"):
+                        err = ScanError("expected `axiom keyword", self.position())
+                        self.find_whitespace()
+                        yield err
+                    end_p = self.position()
+                    yield Axiom(start_p, end_p)
+                elif cur == "e":
+                    if not self.assert_string("end"):
+                        err = ScanError("expected `end keyword", self.position())
+                        self.find_whitespace()
+                        yield err
+                    end_p = self.position()
+                    yield End(start_p, end_p)
+                elif cur == "i":
+                    if not self.assert_string("is"):
+                        err = ScanError("expected `is keyword", self.position())
+                        self.find_whitespace()
+                        yield err
+                    end_p = self.position()
+                    yield Is(start_p, end_p)
+                elif cur == "o":
+                    if not self.assert_string("or"):
+                        err = ScanError("expected `or keyword", self.position())
+                        self.find_whitespace()
+                        yield err
+                    end_p = self.position()
+                    yield Or(start_p, end_p)
+                else:
+                    err = ScanError("expected `or keyword", self.position())
+                    self.find_whitespace()
+                    yield err
             elif cur == "(":
-                p = self.position()
+                start_p = self.position()
                 self._advance()
                 end_p = self.position()
-                yield LeftParen(p, end_p)
+                yield LeftParen(start_p, end_p)
                 errored = False
                 continue
             elif cur == ")":
-                p = self.position()
+                start_p = self.position()
                 self._advance()
                 end_p = self.position()
-                yield RightParen(p, end_p)
+                yield RightParen(start_p, end_p)
                 errored = False
                 continue
-            elif cur == "+":
-                p = self.position()
+            elif cur == '"':
+                start_p = self.position()
                 self._advance()
+                while True:
+                    cur = self._text.peek()
+                    if cur is None or cur in ('"', "\n"):
+                        break
+                if cur is None or cur == "\n":
+                    yield ScanError('expected a closing quote (")', self.position())
+                    continue
                 end_p = self.position()
-                yield Plus(p, end_p)
-                errored = False
-                continue
-            elif cur == "*":
-                p = self.position()
                 self._advance()
-                end_p = self.position()
-                yield Mult(p, end_p)
+                yield Identifier(start_p, end_p, )
                 errored = False
                 continue
             else:
