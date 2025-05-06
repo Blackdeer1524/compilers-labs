@@ -1,6 +1,6 @@
 from collections import defaultdict, deque
-import sys
-from typing import Any, DefaultDict, Deque, Generator, Literal, Optional, TextIO
+from pprint import pprint
+from typing import DefaultDict, Deque, Generator, Literal, Optional, TextIO
 from dataclasses import dataclass
 
 
@@ -160,12 +160,23 @@ class Scanner:
                 self._advance()
 
 
-class Analyzer:
-    NON_TERMINALS = Literal["E", "E1", "T", "T1", "F"]
-    TERMINALS = Literal["n", "(", "+", "*", ")", "$"]
-    EPSILON_T = Literal["EPSILON"]
-    EPSILON: EPSILON_T = "EPSILON"
+NON_TERMINALS = Literal["E", "E1", "T", "T1", "F"]
+TERMINALS = Literal["n", "(", "+", "*", ")", "$"]
+EPSILON_T = Literal["EPSILON"]
+EPSILON: EPSILON_T = "EPSILON"
 
+
+@dataclass
+class Node:
+    name: EPSILON_T | TERMINALS | NON_TERMINALS
+    index: int
+    children: list["Node"]
+
+    def full_name(self) -> str:
+        return f'"{self.name} [{self.index}]"'
+
+
+class Analyzer:
     _table: dict[
         NON_TERMINALS,
         dict[
@@ -228,24 +239,19 @@ class Analyzer:
 
         graph = "digraph {\n"
         c = 1
-        INIT_NODE_NAME = f'"E[{c}]"'
 
-        d: Deque[
-            tuple[
-                Analyzer.EPSILON_T | Analyzer.TERMINALS | Analyzer.NON_TERMINALS,
-                str,
-                int,
-            ]
-        ] = deque([("E", INIT_NODE_NAME, 0)])
+        init = Node("E", c, [])
+        d: Deque[tuple[Node, int]] = deque([(init, 0)])
         for token in self.scanner:
             if len(d) == 0:
                 raise RuntimeError(
                     "stack is exhausted, but there are still tokens left!"
                 )
             while len(d) > 0:
-                (top, node_name, depth) = d.popleft()
-                depth_siblings[depth].append(node_name)
-                match top:
+                # (top, node_name, depth) = d.popleft()
+                cur_node, depth = d.popleft()
+                depth_siblings[depth].append(cur_node.full_name())
+                match cur_node.name:
                     case "n":
                         if type(token) != Identifier:
                             raise RuntimeError(
@@ -298,9 +304,10 @@ class Analyzer:
                                     raise RuntimeError(f"unexpected token: {token}")
 
                                 for i, v in enumerate(reversed(rule)):
-                                    child_name = f'"{v}[{c + len(rule) - i}]"'
-                                    graph += f"\t{node_name}->{child_name}\n"
-                                    d.appendleft((v, child_name, depth + 1))
+                                    child = Node(v, c + len(rule) - i, [])
+                                    graph += f"\t{cur_node.full_name()}->{child.full_name()}\n"
+                                    d.appendleft((child, depth + 1))
+                                    cur_node.children.append(child)
                                 c += len(rule)
                             case ScanError():
                                 raise RuntimeError(f"scanner error: {token}")
@@ -313,13 +320,17 @@ class Analyzer:
             graph += " [style=invis] }\n"
 
         graph += "}"
-        return graph
+        print(graph)
+        # return graph
+        return init
 
 
 def main():
     s = Scanner(open("./test.txt"))
     a = Analyzer(s)
-    print(a.parse())
+    res = a.parse()
+    print("==================")
+    pprint(res)
 
 
 if __name__ == "__main__":
