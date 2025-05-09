@@ -1,3 +1,1 @@
 T1 `is "*" F T1 `or `epsilon `end
-`axiom E  `is T E1 `end
-E1 `is "+" T E1 `or `epsilon `end

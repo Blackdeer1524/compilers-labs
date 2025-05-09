@@ -1,6 +1,5 @@
 import abc
 from collections import deque
-from pprint import pprint
 from typing import (
     Deque,
     Generator,
@@ -10,16 +9,6 @@ from typing import (
     Union,
 )
 from dataclasses import dataclass
-
-"""
-S         ::= "`asiom"? NT "`is" RULE_OPT ("`or" RULE_OPT)* "`end" S | 𝓔
-RULE_OPT  ::= RULE | "`epsilon" 
-RULE      ::= "(" RULE ")" | RULE_ITEM RULE_TAIL
-RULE_TAIL ::= RULE | 𝓔
-RULE_ITEM ::= T | NT
-NT        ::= [a-zA-Z_] [a-zA-Z0-9_]*
-T         ::= "\"" (.+)? "\""
-"""
 
 
 @dataclass(frozen=True)
@@ -377,6 +366,9 @@ class ProductionNode(IGraphVizible):
                 res += "".join(
                     f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
                 )
+                res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                    " -> ".join(child.node_name for child in self.value)
+                )
         return res
 
 
@@ -398,6 +390,9 @@ class RuleNode(IGraphVizible):
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
                     f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
+                )
+                res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                    " -> ".join(child.node_name for child in self.value)
                 )
             case _:
                 res += self.value.to_graphviz()
@@ -439,6 +434,9 @@ class RuleAltNode(IGraphVizible):
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
                     f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
+                )
+                res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                    " -> ".join(child.node_name for child in self.value)
                 )
         return res
 
