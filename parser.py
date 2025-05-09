@@ -87,12 +87,12 @@ class Segment:
 
 
 @dataclass(frozen=True)
-class QuotedString(Segment):
+class Term(Segment):
     value: str
 
 
 @dataclass(frozen=True)
-class Identifier(Segment):
+class NonTerm(Segment):
     value: str
 
 
@@ -134,7 +134,7 @@ class ScanError:
 
 Keyword = Axiom | End | Is | Or | Epsilon
 
-Token = QuotedString | Identifier | Keyword | EOF
+Token = Term | NonTerm | Keyword | EOF
 
 
 class Scanner:
@@ -184,49 +184,57 @@ class Scanner:
                 start_p = self._text.position()
                 self._text.advance()
                 cur = self._text.peek()
-                if cur == "a":
-                    if not self.assert_string("axiom"):
-                        err = ScanError(
-                            "expected `axiom keyword", self._text.position()
-                        )
+                match cur:
+                    case "a":
+                        if not self.assert_string("axiom"):
+                            err = ScanError(
+                                "expected `axiom keyword", self._text.position()
+                            )
+                            self.find_whitespace()
+                            yield err
+                        end_p = self._text.position()
+                        yield Axiom(start_p, end_p)
+                    case "e":
+                        self._text.advance()
+                        cur = self._text.peek()
+                        if cur == "n":
+                            if not self.assert_string("nd"):
+                                err = ScanError("expected `end keyword", self._text.position())
+                                self.find_whitespace()
+                                yield err
+                            end_p = self._text.position()
+                            yield End(start_p, end_p)
+                        elif cur == "p": 
+                            if not self.assert_string("psilon"):
+                                err = ScanError(
+                                    "expected `epsilon keyword", self._text.position()
+                                )
+                                self.find_whitespace()
+                                yield err
+                            end_p = self._text.position()
+                            yield Epsilon(start_p, end_p)
+                        else: 
+                            err = ScanError("expected either `end or `epsilon", self._text.position())
+                            self.find_whitespace()
+                            yield err
+                    case "i":
+                        if not self.assert_string("is"):
+                            err = ScanError("expected `is keyword", self._text.position())
+                            self.find_whitespace()
+                            yield err
+                        end_p = self._text.position()
+                        yield Is(start_p, end_p)
+                    case "o":
+                        if not self.assert_string("or"):
+                            err = ScanError("expected `or keyword", self._text.position())
+                            self.find_whitespace()
+                            yield err
+                        end_p = self._text.position()
+                        yield Or(start_p, end_p)
+                    case _:
+                        err = ScanError("expected a keyword", self._text.position())
                         self.find_whitespace()
                         yield err
-                    end_p = self._text.position()
-                    yield Axiom(start_p, end_p)
-                elif cur == "e":
-                    if not self.assert_string("end"):
-                        err = ScanError("expected `end keyword", self._text.position())
-                        self.find_whitespace()
-                        yield err
-                    end_p = self._text.position()
-                    yield End(start_p, end_p)
-                elif cur == "i":
-                    if not self.assert_string("is"):
-                        err = ScanError("expected `is keyword", self._text.position())
-                        self.find_whitespace()
-                        yield err
-                    end_p = self._text.position()
-                    yield Is(start_p, end_p)
-                elif cur == "o":
-                    if not self.assert_string("or"):
-                        err = ScanError("expected `or keyword", self._text.position())
-                        self.find_whitespace()
-                        yield err
-                    end_p = self._text.position()
-                    yield Or(start_p, end_p)
-                elif cur == "e":
-                    if not self.assert_string("epsilon"):
-                        err = ScanError(
-                            "expected `epsilon keyword", self._text.position()
-                        )
-                        self.find_whitespace()
-                        yield err
-                    end_p = self._text.position()
-                    yield Epsilon(start_p, end_p)
-                else:
-                    err = ScanError("expected a keyword", self._text.position())
-                    self.find_whitespace()
-                    yield err
             elif cur == '"':
                 start_p = self._text.position()
                 value = ""
@@ -236,6 +244,7 @@ class Scanner:
                     if cur is None or cur in ('"', "\n"):
                         break
                     value += cur
+                    self._text.advance()
                 if cur is None or cur == "\n":
                     yield ScanError(
                         'expected a closing quote (")', self._text.position()
@@ -243,7 +252,7 @@ class Scanner:
                     continue
                 end_p = self._text.position()
                 self._text.advance()
-                yield QuotedString(start_p, end_p, value)
+                yield Term(start_p, end_p, value)
                 errored = False
                 continue
             elif cur.isalpha():
@@ -252,11 +261,12 @@ class Scanner:
                 self._text.advance()
                 while True:
                     cur = self._text.peek()
-                    if cur is None or not cur.isalnum() or cur not in ("_", "'"):
+                    if cur is None or (not cur.isalnum() and cur not in ("_", "'")):
                         break
                     value += cur
+                    self._text.advance()
                 end_p = self._text.position()
-                yield Identifier(start_p, end_p, value)
+                yield NonTerm(start_p, end_p, value)
             else:
                 if errored:
                     self._text.advance()
@@ -266,40 +276,100 @@ class Scanner:
                 self._text.advance()
 
 
-NON_TERMINALS = Literal["S'", "S", "Rule", "RuleTail", "RuleAlt"]
-# TERMINALS = Type[QuotedString] | Type[Identifier] | Axiom | End | Is
-# EPSILON_T = Literal["EPSILON"]
-# EPSILON: EPSILON_T = "EPSILON"
+NON_TERMINAL = Literal["S'", "Production", "Axiom", "Rule", "RuleTail", "RuleAlt"]
+KEYWORD = Literal["KW_Axiom", "KW_Or", "KW_Is", "KW_Epsilon", "KW_End"]
+TERMINAL = KEYWORD | Literal["NT", "T", "$"]
 
+# ============== AST NODES ================
+
+@dataclass(frozen=True)
+class Production:
+    LHS: NonTerm
+    is_axiom: bool
+    RHS: list[list[NonTerm | Term]]
+
+# ==========================================
 
 class Analyzer:
     def __init__(self, s: Scanner):
         self.scanner = s
 
-    def transitions(self, t: Token):
-        match t:
-            case QuotedString():
-                return {
-                    "S'": [],
-                    "S": [],
-                    "Rule": [],
-                    "RuleTail": [],
-                    "RuleAlt": [],
-                }
-            case Identifier():
-                ...
-            case Axiom():
-                ...
-            case End():
-                ...
-            case Is():
-                ...
-            case Or():
-                ...
-            case Epsilon():
-                ...
-            case EOF():
-                ...
+    @staticmethod
+    def transitions(
+        current: NON_TERMINAL, t: Token
+    ) -> list[NON_TERMINAL | TERMINAL] | None:
+        # fmt: off
+        match current:
+            case "S'":  
+                match t:
+                    case Axiom():   return ["Production", "$"]
+                    case NonTerm(): return ["Production", "$"]
+                    case Term():    return None
+                    case Or():      return None 
+                    case Is():      return None 
+                    case Epsilon(): return None 
+                    case End():     return None 
+                    case EOF():     return ["Production", "$"] 
+            case "Production": 
+                match t:
+                    case Axiom():   return ["Axiom", "NT", "KW_Is", "Rule", "RuleAlt", "KW_End", "Production"]
+                    case NonTerm(): return ["Axiom", "NT", "KW_Is", "Rule", "RuleAlt", "KW_End", "Production"] 
+                    case Term():    return None
+                    case Or():      return None 
+                    case Is():      return None 
+                    case Epsilon(): return None 
+                    case End():     return None 
+                    case EOF():     return [] 
+            case "Rule":
+                match t:
+                    case Axiom():   return None
+                    case NonTerm(): return ["NT", "RuleTail"] 
+                    case Term():    return ["T", "RuleTail"]
+                    case Or():      return None 
+                    case Is():      return None 
+                    case Epsilon(): return ["KW_Epsilon"] 
+                    case End():     return None 
+                    case EOF():     return None
+            case "RuleTail": 
+                match t:
+                    case Axiom():   return None
+                    case NonTerm(): return ["NT", "RuleTail"] 
+                    case Term():    return ["T", "RuleTail"]
+                    case Or():      return [] 
+                    case Is():      return None 
+                    case Epsilon(): return ["KW_Epsilon"] 
+                    case End():     return [] 
+                    case EOF():     return None
+            case "RuleAlt":
+                match t:
+                    case Axiom():   return None
+                    case NonTerm(): return None
+                    case Term():    return None
+                    case Or():      return ["KW_Or", "Rule", "RuleAlt"] 
+                    case Is():      return None 
+                    case Epsilon(): return None 
+                    case End():     return [] 
+                    case EOF():     return None
+            case "Axiom":
+                match t:
+                    case Axiom():   return ["KW_Axiom"]
+                    case NonTerm(): return []
+                    case Term():    return None
+                    case Or():      return None 
+                    case Is():      return None 
+                    case Epsilon(): return None 
+                    case End():     return None 
+                    case EOF():     return None
+        # fmt: on
+
+    @dataclass
+    class Node:
+        name: NON_TERMINAL | TERMINAL
+        index: int
+        children: list["Analyzer.Node"]
+
+        def full_name(self) -> str:
+            return f'"{self.name} [{self.index}]"'
 
     def parse(self):
         depth_siblings: DefaultDict[int, list[str]] = defaultdict(lambda: [])
@@ -307,77 +377,74 @@ class Analyzer:
         graph = "digraph {\n"
         c = 1
 
-        init = Node("E", c, [])
-        d: Deque[tuple[Node, int]] = deque([(init, 0)])
+        init = Analyzer.Node("S'", c, [])
+        d: Deque[tuple[Analyzer.Node, int]] = deque([(init, 0)])
         for token in self.scanner:
             if len(d) == 0:
                 raise RuntimeError(
                     "stack is exhausted, but there are still tokens left!"
                 )
             while len(d) > 0:
-                # (top, node_name, depth) = d.popleft()
                 cur_node, depth = d.popleft()
                 depth_siblings[depth].append(cur_node.full_name())
                 match cur_node.name:
-                    case "n":
-                        if type(token) != QuotedString:
+                    case "KW_Axiom":
+                        if type(token) != Axiom:
                             raise RuntimeError(
-                                f"expected Identifier, but {type(token)} found"
+                                f"expected Axiom, but {type(token)} found"
                             )
                         break
-                    case "(":
-                        if type(token) != LeftParen:
+                    case "KW_Or":
+                        if type(token) != Or:
+                            raise RuntimeError(f"expected Or, but {type(token)} found")
+                        break
+                    case "KW_Is":
+                        if type(token) != Is:
+                            raise RuntimeError(f"expected Is, but {type(token)} found")
+                        break
+                    case "KW_Epsilon":
+                        if type(token) != Epsilon:
                             raise RuntimeError(
-                                f"expected LeftParen, but {type(token)} found"
+                                f"expected Epsilon, but {type(token)} found"
                             )
                         break
-                    case "*":
-                        if type(token) != Mult:
-                            raise RuntimeError(
-                                f"expected Mult, but {type(token)} found"
-                            )
-                        break
-                    case "+":
-                        if type(token) != Plus:
-                            raise RuntimeError(
-                                f"expected Plus, but {type(token)} found"
-                            )
-                        break
-                    case ")":
-                        if type(token) != RightParen:
+                    case "KW_End":
+                        if type(token) != End:
                             raise RuntimeError(
                                 f"expected RightParen, but {type(token)} found"
+                            )
+                        break
+                    case "NT":
+                        if type(token) != NonTerm:
+                            raise RuntimeError(
+                                f"expected NonTerm, but {type(token)} found"
+                            )
+                        break
+                    case "T":
+                        if type(token) != Term:
+                            raise RuntimeError(
+                                f"expected Term, but {type(token)} found"
                             )
                         break
                     case "$":
                         if type(token) != EOF:
                             raise RuntimeError(f"expected EOF, but {type(token)} found")
                         break
-                    case "EPSILON":
-                        continue
                     case non_terminal:
-                        expected = Analyzer._table[non_terminal]
                         match token:
-                            case (
-                                Plus()
-                                | Mult()
-                                | LeftParen()
-                                | RightParen()
-                                | QuotedString()
-                                | EOF()
-                            ):
-                                rule = expected[type(token)]
-                                if len(rule) == 0:
+                            case ScanError():
+                                raise RuntimeError(f"scanner error: {token}")
+                            case _:
+                                rule = Analyzer.transitions(non_terminal, token)
+                                if rule is None:
                                     raise RuntimeError(f"unexpected token: {token}")
 
                                 for i, v in enumerate(reversed(rule)):
-                                    child = Node(v, c + len(rule) - i, [])
+                                    child = Analyzer.Node(v, c + len(rule) - i, [])
                                     graph += f"\t{cur_node.full_name()}->{child.full_name()}\n"
                                     d.appendleft((child, depth + 1))
                                     cur_node.children.append(child)
                                 c += len(rule)
-                            case ScanError():
-                                raise RuntimeError(f"scanner error: {token}")
 
         for _, v in depth_siblings.items():
             if len(v) < 2:
