@@ -797,19 +797,6 @@ class Analyzer:
                     case EOF():
                         return None
 
-    @dataclass
-    class Node:
-        name: NON_TERMINAL | TERMINAL
-        index: int
-        children: list["Analyzer.Node"]
-        token: Token | None
-
-        def full_name(self) -> str:
-            res = f'"{self.name}[{self.index}]"'
-            if self.token is not None:
-                res += str(self.token)
-            return res
-
     def parse(self):
         init = InitNode()
         d: Deque[tuple[TERMINAL | NON_TERMINAL, int]] = deque([(init, 0)])
