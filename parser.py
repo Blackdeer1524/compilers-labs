@@ -1,3 +1,4 @@
+import abc
 from collections import deque
 from pprint import pprint
 from typing import (
@@ -90,47 +91,75 @@ class Segment:
     end: Position
 
 
+class IGraphVizible(abc.ABC):
+    @property
+    def node_name(self) -> str:
+        return f"{self.__class__.__name__}{id(self)}"
+
+    @abc.abstractmethod
+    def to_graphviz(self) -> str:
+        return f'\t{self.node_name} [label="{self.__class__.__name__}"]\n'
+
+
 # ==============================================
 
 
 @dataclass(frozen=True)
-class Term(Segment):
+class Term(Segment, IGraphVizible):
     value: str
+
+    def to_graphviz(self) -> str:
+        return f'\t{self.node_name} [label="{self}"]\n'
 
 
 @dataclass(frozen=True)
-class NonTerm(Segment):
+class NonTerm(Segment, IGraphVizible):
     value: str
+
+    def to_graphviz(self) -> str:
+        return f'\t{self.node_name} [label="{self}"]\n'
 
 
 # ================= Keywords ===================
 
 
 @dataclass(frozen=True)
-class Axiom(Segment): ...
+class Axiom(Segment, IGraphVizible):
+    def to_graphviz(self) -> str:
+        return f'\t{self.node_name} [label="{self}"]\n'
 
 
 @dataclass(frozen=True)
-class Is(Segment): ...
+class Is(Segment, IGraphVizible):
+    def to_graphviz(self) -> str:
+        return f'\t{self.node_name} [label="{self}"]\n'
 
 
 @dataclass(frozen=True)
-class Or(Segment): ...
+class Or(Segment, IGraphVizible):
+    def to_graphviz(self) -> str:
+        return f'\t{self.node_name} [label="{self}"]\n'
 
 
 @dataclass(frozen=True)
-class End(Segment): ...
+class End(Segment, IGraphVizible):
+    def to_graphviz(self) -> str:
+        return f'\t{self.node_name} [label="{self}"]\n'
 
 
 @dataclass(frozen=True)
-class Epsilon(Segment): ...
+class Epsilon(Segment, IGraphVizible):
+    def to_graphviz(self) -> str:
+        return f'\t{self.node_name} [label="{self}"]\n'
 
 
 # ============================================
 
 
 @dataclass(frozen=True)
-class EOF(Segment): ...
+class EOF(Segment, IGraphVizible):
+    def to_graphviz(self) -> str:
+        return f'\t{self.node_name} [label="{self}"]\n'
 
 
 @dataclass(frozen=True)
@@ -297,16 +326,32 @@ class Scanner:
 # TERMINAL = KEYWORD | Literal["NT", "T", "$"]
 
 # ================== AST NODES ==================
+
 # ================ Non-Terminals ================
 
 
 @dataclass
-class InitNode:
+class InitNode(IGraphVizible):
     value: Optional[tuple["ProductionNode", "EOFNode"]] = None
+
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        if self.value is None:
+            epsilon_name = f"𝓔{id(self)}"
+            res += f'\t{epsilon_name} [label="𝓔"]\n'
+            res += f"{self.node_name} -> {epsilon_name}"
+            return res
+
+        res += self.value[0].to_graphviz()
+        res += self.value[1].to_graphviz()
+
+        res += f"\t{self.node_name} -> {self.value[0].node_name}"
+        res += f"\t{self.node_name} -> {self.value[1].node_name}"
+        return res
 
 
 @dataclass
-class ProductionNode:
+class ProductionNode(IGraphVizible):
     value: Optional[
         tuple[
             "AxiomNode",
@@ -319,27 +364,101 @@ class ProductionNode:
         ]
     ] = None
 
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case tuple():
+                res += "".join(child.to_graphviz() for child in self.value)
+                res += "".join(
+                    f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
+                )
+        return res
+
 
 @dataclass
-class RuleNode:
+class RuleNode(IGraphVizible):
     value: Optional[
         Union[tuple["TermNode | NonTermNode", "RuleTailNode"], "KWEpsilonNode"]
     ] = None
 
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case tuple():
+                res += "".join(child.to_graphviz() for child in self.value)
+                res += "".join(
+                    f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
+                )
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
 
 @dataclass
-class RuleTailNode:
+class RuleTailNode(IGraphVizible):
     value: Optional[Union[RuleNode, "KWEpsilonNode"]] = None
 
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
 
 @dataclass
-class RuleAltNode:
+class RuleAltNode(IGraphVizible):
     value: Optional[tuple["KWOrNode", "RuleNode", "RuleAltNode"]] = None
 
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case tuple():
+                res += "".join(child.to_graphviz() for child in self.value)
+                res += "".join(
+                    f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
+                )
+        return res
+
 
 @dataclass
-class AxiomNode:
+class AxiomNode(IGraphVizible):
     value: Optional["KWAxiomNode"] = None
+
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
 
 
 NON_TERMINAL = (
@@ -350,28 +469,93 @@ NON_TERMINAL = (
 
 
 @dataclass
-class KWAxiomNode:
+class KWAxiomNode(IGraphVizible):
     value: Optional[Axiom] = None
 
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
 
 @dataclass
-class KWOrNode:
+class KWOrNode(IGraphVizible):
     value: Optional[Or] = None
 
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
 
 @dataclass
-class KWIsNode:
+class KWIsNode(IGraphVizible):
     value: Optional[Is] = None
 
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
 
 @dataclass
-class KWEpsilonNode:
+class KWEpsilonNode(IGraphVizible):
     value: Optional[Epsilon] = None
 
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
 
 @dataclass
-class KWEndNode:
+class KWEndNode(IGraphVizible):
     value: Optional[End] = None
+
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
 
 
 KEYWORDS = KWAxiomNode | KWOrNode | KWIsNode | KWEpsilonNode | KWEndNode
@@ -380,18 +564,57 @@ KEYWORDS = KWAxiomNode | KWOrNode | KWIsNode | KWEpsilonNode | KWEndNode
 
 
 @dataclass
-class NonTermNode:
+class NonTermNode(IGraphVizible):
     value: Optional[NonTerm] = None
 
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
 
 @dataclass
-class TermNode:
+class TermNode(IGraphVizible):
     value: Optional[Term] = None
 
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
 
 @dataclass
-class EOFNode:
+class EOFNode(IGraphVizible):
     value: Optional[EOF] = None
+
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
 
 
 TERMINAL = KEYWORDS | NonTermNode | TermNode | EOFNode
@@ -648,7 +871,7 @@ def main():
     a = Analyzer(s)
     res = a.parse()
     print("==================")
-    pprint(res)
+    print(res.to_graphviz())
 
 
 if __name__ == "__main__":
