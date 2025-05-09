@@ -280,15 +280,18 @@ NON_TERMINAL = Literal["S'", "Production", "Axiom", "Rule", "RuleTail", "RuleAlt
 KEYWORD = Literal["KW_Axiom", "KW_Or", "KW_Is", "KW_Epsilon", "KW_End"]
 TERMINAL = KEYWORD | Literal["NT", "T", "$"]
 
-# ============== AST NODES ================
-
-@dataclass(frozen=True)
-class Production:
+@dataclass
+class ProductionNode:
     LHS: NonTerm
-    is_axiom: bool
-    RHS: list[list[NonTerm | Term]]
 
-# ==========================================
+
+    
+
+@dataclass
+class InitNode:
+    prod: ProductionNode
+
+
 
 class Analyzer:
     def __init__(self, s: Scanner):
@@ -296,12 +299,12 @@ class Analyzer:
 
     @staticmethod
     def transitions(
-        current: NON_TERMINAL, t: Token
+        current: NON_TERMINAL, token: Token
     ) -> list[NON_TERMINAL | TERMINAL] | None:
         # fmt: off
         match current:
             case "S'":  
-                match t:
+                match token:
                     case Axiom():   return ["Production", "$"]
                     case NonTerm(): return ["Production", "$"]
                     case Term():    return None
@@ -311,7 +314,7 @@ class Analyzer:
                     case End():     return None 
                     case EOF():     return ["Production", "$"] 
             case "Production": 
-                match t:
+                match token:
                     case Axiom():   return ["Axiom", "NT", "KW_Is", "Rule", "RuleAlt", "KW_End", "Production"]
                     case NonTerm(): return ["Axiom", "NT", "KW_Is", "Rule", "RuleAlt", "KW_End", "Production"] 
                     case Term():    return None
@@ -321,7 +324,7 @@ class Analyzer:
                     case End():     return None 
                     case EOF():     return [] 
             case "Rule":
-                match t:
+                match token:
                     case Axiom():   return None
                     case NonTerm(): return ["NT", "RuleTail"] 
                     case Term():    return ["T", "RuleTail"]
@@ -331,7 +334,7 @@ class Analyzer:
                     case End():     return None 
                     case EOF():     return None
             case "RuleTail": 
-                match t:
+                match token:
                     case Axiom():   return None
                     case NonTerm(): return ["NT", "RuleTail"] 
                     case Term():    return ["T", "RuleTail"]
@@ -341,7 +344,7 @@ class Analyzer:
                     case End():     return [] 
                     case EOF():     return None
             case "RuleAlt":
-                match t:
+                match token:
                     case Axiom():   return None
                     case NonTerm(): return None
                     case Term():    return None
@@ -351,7 +354,7 @@ class Analyzer:
                     case End():     return [] 
                     case EOF():     return None
             case "Axiom":
-                match t:
+                match token:
                     case Axiom():   return ["KW_Axiom"]
                     case NonTerm(): return []
                     case Term():    return None
@@ -367,17 +370,20 @@ class Analyzer:
         name: NON_TERMINAL | TERMINAL
         index: int
         children: list["Analyzer.Node"]
+        token: Token | None
 
         def full_name(self) -> str:
-            return f'"{self.name} [{self.index}]"'
+            res = f'"{self.name}[{self.index}]"'
+            if self.token is not None:
+                res += str(self.token)
+            return res
+    
 
     def parse(self):
         depth_siblings: DefaultDict[int, list[str]] = defaultdict(lambda: [])
 
-        graph = "digraph {\n"
         c = 1
-
-        init = Analyzer.Node("S'", c, [])
+        init = Analyzer.Node("S'", c, [], None)
         d: Deque[tuple[Analyzer.Node, int]] = deque([(init, 0)])
         for token in self.scanner:
             if len(d) == 0:
@@ -393,6 +399,7 @@ class Analyzer:
                             raise RuntimeError(
                                 f"expected Axiom, but {type(token)} found"
                             )
+                        
                         break
                     case "KW_Or":
                         if type(token) != Or:
@@ -440,8 +447,7 @@ class Analyzer:
                                     raise RuntimeError(f"unexpected token: {token}")
 
                                 for i, v in enumerate(reversed(rule)):
-                                    child = Analyzer.Node(v, c + len(rule) - i, [])
-                                    graph += f"\t{cur_node.full_name()}->{child.full_name()}\n"
+                                    child = Analyzer.Node(v, c + len(rule) - i, [], token)
                                     d.appendleft((child, depth + 1))
                                     cur_node.children.append(child)
                                 c += len(rule)
