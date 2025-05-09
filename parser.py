@@ -98,7 +98,7 @@ class Term(Segment, IGraphVizible):
     value: str
 
     def to_graphviz(self) -> str:
-        return f'\t{self.node_name} [label="{self}"]\n'
+        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
 
 
 @dataclass(frozen=True)
@@ -106,7 +106,7 @@ class NonTerm(Segment, IGraphVizible):
     value: str
 
     def to_graphviz(self) -> str:
-        return f'\t{self.node_name} [label="{self}"]\n'
+        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
 
 
 # ================= Keywords ===================
@@ -115,31 +115,31 @@ class NonTerm(Segment, IGraphVizible):
 @dataclass(frozen=True)
 class Axiom(Segment, IGraphVizible):
     def to_graphviz(self) -> str:
-        return f'\t{self.node_name} [label="{self}"]\n'
+        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
 
 
 @dataclass(frozen=True)
 class Is(Segment, IGraphVizible):
     def to_graphviz(self) -> str:
-        return f'\t{self.node_name} [label="{self}"]\n'
+        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
 
 
 @dataclass(frozen=True)
 class Or(Segment, IGraphVizible):
     def to_graphviz(self) -> str:
-        return f'\t{self.node_name} [label="{self}"]\n'
+        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
 
 
 @dataclass(frozen=True)
 class End(Segment, IGraphVizible):
     def to_graphviz(self) -> str:
-        return f'\t{self.node_name} [label="{self}"]\n'
+        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
 
 
 @dataclass(frozen=True)
 class Epsilon(Segment, IGraphVizible):
     def to_graphviz(self) -> str:
-        return f'\t{self.node_name} [label="{self}"]\n'
+        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
 
 
 # ============================================
@@ -148,7 +148,7 @@ class Epsilon(Segment, IGraphVizible):
 @dataclass(frozen=True)
 class EOF(Segment, IGraphVizible):
     def to_graphviz(self) -> str:
-        return f'\t{self.node_name} [label="{self}"]\n'
+        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
 
 
 @dataclass(frozen=True)
@@ -158,7 +158,6 @@ class ScanError:
 
 
 Keyword = Axiom | End | Is | Or | Epsilon
-
 Token = Term | NonTerm | Keyword | EOF
 
 
@@ -273,11 +272,33 @@ class Scanner:
                 start_p = self._text.position()
                 value = ""
                 self._text.advance()
+                allow_special = False
                 while True:
                     cur = self._text.peek()
-                    if cur is None or cur in ('"', "\n"):
+                    if cur is None or cur == "\n":
                         break
-                    value += cur
+
+                    if allow_special:
+                        if cur == '"':
+                            value += '"'
+                        elif cur == "\\":
+                            value += "\\"
+                        else:
+                            value += f"\\{cur}"
+                            yield ScanError(
+                                f"unknown special symbol: \\{cur}",
+                                self._text.position(),
+                            )
+                        allow_special = False
+                    else:
+                        if cur == '"':
+                            break
+
+                        if cur == "\\":
+                            allow_special = True
+                        else:
+                            value += cur
+
                     self._text.advance()
                 if cur is None or cur == "\n":
                     yield ScanError(
@@ -868,8 +889,9 @@ def main():
     s = Scanner(open("./test.txt"))
     a = Analyzer(s)
     res = a.parse()
-    print("==================")
+    print("digraph {")
     print(res.to_graphviz())
+    print("}")
 
 
 if __name__ == "__main__":
