@@ -1,6 +1,13 @@
-from collections import defaultdict, deque
+from collections import deque
 from pprint import pprint
-from typing import DefaultDict, Deque, Generator, Literal, Optional, Sequence, TextIO
+from typing import (
+    Deque,
+    Generator,
+    Optional,
+    Sequence,
+    TextIO,
+    Union,
+)
 from dataclasses import dataclass
 
 """
@@ -122,8 +129,8 @@ class Epsilon(Segment): ...
 # ============================================
 
 
-@dataclass
-class EOF: ...
+@dataclass(frozen=True)
+class EOF(Segment): ...
 
 
 @dataclass(frozen=True)
@@ -177,7 +184,7 @@ class Scanner:
             self.skip_spaces()
             cur = self._text.peek()
             if cur is None:
-                yield EOF()
+                yield EOF(self._text.position(), self._text.position())
                 return
             elif cur == "`":
                 errored = False  # NOTE: В случае ошибки мы всё равно восстановимся
@@ -290,30 +297,39 @@ class Scanner:
 # TERMINAL = KEYWORD | Literal["NT", "T", "$"]
 
 # ================== AST NODES ==================
+# ================ Non-Terminals ================
 
 
 @dataclass
 class InitNode:
-    value: Optional[tuple["ProductionNode", "EOFNode"]]
+    value: Optional[tuple["ProductionNode", "EOFNode"]] = None
 
 
 @dataclass
 class ProductionNode:
-    value: Optional[tuple["KWAxiomNode", "RuleNode"]] = None
+    value: Optional[
+        tuple[
+            "AxiomNode",
+            "NonTermNode",
+            "KWIsNode",
+            "RuleNode",
+            "RuleAltNode",
+            "KWEndNode",
+            "ProductionNode",
+        ]
+    ] = None
 
 
 @dataclass
 class RuleNode:
     value: Optional[
-        tuple["TermNode | NonTermNode", "RuleTailNode"] | "KWEpsilonNode"
+        Union[tuple["TermNode | NonTermNode", "RuleTailNode"], "KWEpsilonNode"]
     ] = None
 
 
 @dataclass
 class RuleTailNode:
-    value: Optional[
-        tuple["TermNode | NonTermNode", "RuleTailNode"] | "KWEpsilonNode"
-    ] = None
+    value: Optional[Union[RuleNode, "KWEpsilonNode"]] = None
 
 
 @dataclass
@@ -329,6 +345,8 @@ class AxiomNode:
 NON_TERMINAL = (
     InitNode | ProductionNode | RuleNode | RuleTailNode | RuleAltNode | AxiomNode
 )
+
+# ================== KEYWORDS ==============
 
 
 @dataclass
@@ -357,6 +375,8 @@ class KWEndNode:
 
 
 KEYWORDS = KWAxiomNode | KWOrNode | KWIsNode | KWEpsilonNode | KWEndNode
+
+# =============== TERMINALS =================
 
 
 @dataclass
@@ -415,32 +435,28 @@ class Analyzer:
             case ProductionNode():
                 match token:
                     case Axiom():
-                        axiom_node = KWAxiomNode()
-                        rule_node = RuleNode()
-                        res = [
-                            axiom_node,
+                        res = (
+                            AxiomNode(),
                             NonTermNode(),
                             KWIsNode(),
-                            rule_node,
+                            RuleNode(),
                             RuleAltNode(),
                             KWEndNode(),
                             ProductionNode(),
-                        ]
-                        current.value = (axiom_node, rule_node)
+                        )
+                        current.value = res
                         return res
                     case NonTerm():
-                        axiom_node = KWAxiomNode()
-                        rule_node = RuleNode()
-                        res = [
-                            axiom_node,
+                        res = (
+                            AxiomNode(),
                             NonTermNode(),
                             KWIsNode(),
-                            rule_node,
+                            RuleNode(),
                             RuleAltNode(),
                             KWEndNode(),
                             ProductionNode(),
-                        ]
-                        current.value = (axiom_node, rule_node)
+                        )
+                        current.value = res
                         return res
                     case Term():
                         return None
@@ -484,11 +500,11 @@ class Analyzer:
                     case Axiom():
                         return None
                     case NonTerm():
-                        current.value = (NonTermNode(), RuleTailNode())
-                        return [current.value[0], current.value[1]]
+                        current.value = RuleNode()
+                        return [current.value]
                     case Term():
-                        current.value = (TermNode(), RuleTailNode())
-                        return [current.value[0], current.value[1]]
+                        current.value = RuleNode()
+                        return [current.value]
                     case Or():
                         return []
                     case Is():
@@ -553,11 +569,8 @@ class Analyzer:
             return res
 
     def parse(self):
-        depth_siblings: DefaultDict[int, list[str]] = defaultdict(lambda: [])
-
-        c = 1
-        init = Analyzer.Node("S'", c, [], None)
-        d: Deque[tuple[Analyzer.Node, int]] = deque([(init, 0)])
+        init = InitNode()
+        d: Deque[tuple[TERMINAL | NON_TERMINAL, int]] = deque([(init, 0)])
         for token in self.scanner:
             if len(d) == 0:
                 raise RuntimeError(
@@ -565,50 +578,56 @@ class Analyzer:
                 )
             while len(d) > 0:
                 cur_node, depth = d.popleft()
-                depth_siblings[depth].append(cur_node.full_name())
-                match cur_node.name:
-                    case "KW_Axiom":
+                match cur_node:
+                    case KWAxiomNode():
                         if type(token) != Axiom:
                             raise RuntimeError(
                                 f"expected Axiom, but {type(token)} found"
                             )
-
+                        cur_node.value = token
                         break
-                    case "KW_Or":
+                    case KWOrNode():
                         if type(token) != Or:
                             raise RuntimeError(f"expected Or, but {type(token)} found")
+                        cur_node.value = token
                         break
-                    case "KW_Is":
+                    case KWIsNode():
                         if type(token) != Is:
                             raise RuntimeError(f"expected Is, but {type(token)} found")
+                        cur_node.value = token
                         break
-                    case "KW_Epsilon":
+                    case KWEpsilonNode():
                         if type(token) != Epsilon:
                             raise RuntimeError(
                                 f"expected Epsilon, but {type(token)} found"
                             )
+                        cur_node.value = token
                         break
-                    case "KW_End":
+                    case KWEndNode():
                         if type(token) != End:
                             raise RuntimeError(
                                 f"expected RightParen, but {type(token)} found"
                             )
+                        cur_node.value = token
                         break
-                    case "NT":
+                    case NonTermNode():
                         if type(token) != NonTerm:
                             raise RuntimeError(
                                 f"expected NonTerm, but {type(token)} found"
                             )
+                        cur_node.value = token
                         break
-                    case "T":
+                    case TermNode():
                         if type(token) != Term:
                             raise RuntimeError(
                                 f"expected Term, but {type(token)} found"
                             )
+                        cur_node.value = token
                         break
-                    case "$":
+                    case EOFNode():
                         if type(token) != EOF:
                             raise RuntimeError(f"expected EOF, but {type(token)} found")
+                        cur_node.value = token
                         break
                     case non_terminal:
                         match token:
@@ -619,24 +638,8 @@ class Analyzer:
                                 if rule is None:
                                     raise RuntimeError(f"unexpected token: {token}")
 
-                                for i, v in enumerate(reversed(rule)):
-                                    child = Analyzer.Node(
-                                        v, c + len(rule) - i, [], token
-                                    )
-                                    d.appendleft((child, depth + 1))
-                                    cur_node.children.append(child)
-                                c += len(rule)
-
-        for _, v in depth_siblings.items():
-            if len(v) < 2:
-                continue
-            graph += "\t{ rank=same;"
-            graph += f"{' -> '.join(v)}"
-            graph += " [style=invis] }\n"
-
-        graph += "}"
-        print(graph)
-        # return graph
+                                for v in reversed(rule):
+                                    d.appendleft((v, depth + 1))
         return init
 
 
