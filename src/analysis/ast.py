@@ -4,8 +4,10 @@ from dataclasses import dataclass
 from src.common.abc import IGraphVizible
 from src.scanning.scanner import Keyword, Ident, EOF, QuotedStr
 
+
 # ================== AST NODES ==================
 # ================ Non-Terminals ================
+
 
 @dataclass
 class InitNode(IGraphVizible):
@@ -34,7 +36,7 @@ class ProductionNode(IGraphVizible):
     value: Optional[
         tuple[
             "AxiomNode",
-            "IdentNode",
+            "NonTermNode",
             # Is
             "KeywordNode",
             "RuleNode",
@@ -67,7 +69,7 @@ class ProductionNode(IGraphVizible):
 class RuleNode(IGraphVizible):
     value: Optional[
         Union[
-            tuple["QStrNode | IdentNode", "RuleTailNode"],
+            tuple["TermNode | NonTermNode", "RuleTailNode"],
             # Epsilon
             "KeywordNode",
         ]
@@ -195,7 +197,7 @@ class KeywordNode(IGraphVizible):
 
 
 @dataclass
-class IdentNode(IGraphVizible):
+class NonTermNode(IGraphVizible):
     value: Optional[Ident] = None
 
     def to_graphviz(self) -> str:
@@ -212,7 +214,7 @@ class IdentNode(IGraphVizible):
 
 
 @dataclass
-class QStrNode(IGraphVizible):
+class TermNode(IGraphVizible):
     value: Optional[QuotedStr] = None
 
     def to_graphviz(self) -> str:
@@ -246,6 +248,21 @@ class EOFNode(IGraphVizible):
         return res
 
 
-TERMINAL = KeywordNode | IdentNode | QStrNode | EOFNode
+TERMINAL = KeywordNode | NonTermNode | TermNode | EOFNode
 
 # ===============================================
+
+__all__ = [
+    "InitNode",
+    "ProductionNode",
+    "RuleNode",
+    "RuleTailNode",
+    "RuleAltNode",
+    "AxiomNode",
+    "KeywordNode",
+    "NonTermNode",
+    "TermNode",
+    "EOFNode",
+    "TERMINAL",
+    "NON_TERMINAL",
+]

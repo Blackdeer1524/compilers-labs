@@ -1,13 +1,13 @@
-from analysis.ast import (
+from src.analysis.ast import (
     NON_TERMINAL,
     TERMINAL,
+    InitNode,
     AxiomNode,
     EOFNode,
-    IdentNode,
-    InitNode,
+    NonTermNode,
     KeywordNode,
     ProductionNode,
-    QStrNode,
+    TermNode,
     RuleAltNode,
     RuleNode,
     RuleTailNode,
@@ -50,7 +50,7 @@ def transitions(
                 case Keyword(value="axiom"):
                     res = (
                         AxiomNode(),
-                        IdentNode(),
+                        NonTermNode(),
                         KeywordNode(kind="is"),
                         RuleNode(),
                         RuleAltNode(),
@@ -62,7 +62,7 @@ def transitions(
                 case Ident():
                     res = (
                         AxiomNode(),
-                        IdentNode(),
+                        NonTermNode(),
                         KeywordNode(kind="is"),
                         RuleNode(),
                         RuleAltNode(),
@@ -90,12 +90,12 @@ def transitions(
                 case Keyword(value="axiom"):
                     return f"unexpected token: {token}"
                 case Ident():
-                    nt = IdentNode()
+                    nt = NonTermNode()
                     tail = RuleTailNode()
                     current.value = (nt, tail)
                     return [nt, tail]
                 case QuotedStr():
-                    t = QStrNode()
+                    t = TermNode()
                     tail = RuleTailNode()
                     current.value = (t, tail)
                     return [t, tail]
@@ -204,12 +204,12 @@ def transitions(
             return None
         case KeywordNode(kind=unknown):
             return f"unknown keyword: {unknown}"
-        case IdentNode():
+        case NonTermNode():
             if type(token) != Ident:
                 return f"expected NonTerm, but {type(token)} found"
             current.value = token
             return None
-        case QStrNode():
+        case TermNode():
             if type(token) != QuotedStr:
                 return f"expected Term, but {type(token)} found"
             current.value = token
