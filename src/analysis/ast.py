@@ -14,11 +14,11 @@ from src.text.processors import Position
 
 @dataclass(kw_only=True)
 class IASTNode(IGraphVizible):
-    start: Optional[Position] = field(init=False, default=None)
+    pos: Optional[Position] = field(init=False, default=None)
 
     @property
     def node_label(self) -> str:
-        return super().node_label + f"{wrap(str(self.start))}"
+        return super().node_label + wrap(f"{str(self.pos)})")
 
 
 @dataclass
