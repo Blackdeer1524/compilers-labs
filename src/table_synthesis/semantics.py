@@ -4,15 +4,16 @@ from src.scanning.scanner import Ident, QuotedStr
 from src.analysis.ast import *
 from src.text.processors import Position
 
-RULE_T = list[Ident | QuotedStr | Literal["epsilon"]]
-AXIOM_INTO_T = tuple[str | None, Position | None] | None
+RULE_TAIL_T = list[Ident | QuotedStr]
+RULE_T = RULE_TAIL_T | Literal["epsilon"]
+
+AXIOM_INTO_T = tuple[str | None, Position | None]
 
 
 @dataclass
 class ProductionInfo:
     lhs: Ident
     rhs: list[RULE_T]
-    is_axiom: bool
 
 
 class SemanticsAnalyzer:
@@ -26,7 +27,6 @@ class SemanticsAnalyzer:
         return node.value is not None
 
     def collect_nonterm(self, node: NonTermNode) -> Optional[Ident]:
-
         if node.value is None:
             self.store_error(f"expected {node.node_label} not to be None", node.pos)
             return None
@@ -38,17 +38,20 @@ class SemanticsAnalyzer:
             return None
         return node.value
 
-    def collect_rule_tail(self, node: RuleTailNode) -> RULE_T:
+    def collect_rule_tail(self, node: RuleTailNode) -> RULE_TAIL_T:
         match node.value:
             case None:
                 return []
-            case KeywordNode(kind="epsilon"):
-                return ["epsilon"]
-            case KeywordNode(kind=unknown):
-                self.store_error(f"unexpected keyword: {unknown}", node.pos)
-                return []
-            case RuleNode() as rule:
-                return self.collect_rule(rule)
+            case (TermNode() as term, RuleTailNode() as tail):
+                term = self.collect_term(term)
+                if term is None:
+                    return self.collect_rule_tail(tail)
+                return [term] + self.collect_rule_tail(tail)
+            case (NonTermNode() as non_term, RuleTailNode() as tail):
+                non_term = self.collect_nonterm(non_term)
+                if non_term is None:
+                    return self.collect_rule_tail(tail)
+                return [non_term] + self.collect_rule_tail(tail)
 
     def collect_rule(self, node: RuleNode) -> RULE_T:
         match node.value:
@@ -66,7 +69,7 @@ class SemanticsAnalyzer:
                     return self.collect_rule_tail(tail)
                 return [non_term] + self.collect_rule_tail(tail)
             case KeywordNode(kind="epsilon"):
-                return ["epsilon"]
+                return "epsilon"
             case KeywordNode(kind=unknown):
                 self.store_error(f"unexpected keyword: {unknown}", node.pos)
                 return []
@@ -98,7 +101,7 @@ class SemanticsAnalyzer:
 
     def process_productions(
         self, node: InitNode
-    ) -> tuple[AXIOM_INTO_T, dict[str, ProductionInfo]] | list[str]:
+    ) -> tuple[str, dict[str, ProductionInfo]] | list[str]:
         cur_opt = self.collect_init_node(node)
         if cur_opt is None:
             errs = self.errors
@@ -106,7 +109,7 @@ class SemanticsAnalyzer:
             return errs
         cur = cur_opt
 
-        axiom_info: AXIOM_INTO_T = None
+        axiom_info: AXIOM_INTO_T | None = None
         res: dict[str, ProductionInfo] = {}
         while True:
             if cur.value is None:
@@ -139,7 +142,7 @@ class SemanticsAnalyzer:
 
             if lhs is not None:
                 if (prev_def := res.get(lhs.value)) is None:
-                    res[lhs.value] = ProductionInfo(lhs, rhs, is_axiom)
+                    res[lhs.value] = ProductionInfo(lhs, rhs)
                 else:
                     self.store_error(
                         f"found redefinition of {lhs.value}. Prev definition: {prev_def.lhs.start}",
@@ -147,9 +150,14 @@ class SemanticsAnalyzer:
                     )
             cur = next_prod
 
+        if axiom_info is None:
+            self.store_error("no axioms found", None)
+
         if len(self.errors) > 0:
             errs = self.errors
             self.errors = []
             return errs
 
-        return (axiom_info, res)
+        assert axiom_info is not None
+        assert axiom_info[0] is not None
+        return (axiom_info[0], res)

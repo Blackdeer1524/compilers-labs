@@ -5,7 +5,7 @@ from src.analysis.transitions import NON_TERMINAL, TERMINAL, InitNode, transitio
 from src.scanning.scanner import ScanError, Scanner
 
 
-class Analyzer:
+class SyntacticAnalyzer:
     def __init__(self, s: Scanner):
         self.scanner = s
 

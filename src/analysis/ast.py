@@ -111,11 +111,8 @@ class RuleNode(IASTNode):
 @dataclass
 class RuleTailNode(IASTNode):
     value: Optional[
-        Union[
-            RuleNode,
-            # epsilon
-            "KeywordNode",
-        ]
+        tuple["NonTermNode", "RuleTailNode"] |
+        tuple["TermNode", "RuleTailNode"] 
     ] = None
 
     def to_graphviz(self) -> str:
@@ -125,9 +122,14 @@ class RuleTailNode(IASTNode):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-            case _:
-                res += self.value.to_graphviz()
-                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+            case tuple():
+                res += "".join(child.to_graphviz() for child in self.value)
+                res += "".join(
+                    f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
+                )
+                res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                    " -> ".join(child.node_name for child in self.value)
+                )
         return res
 
 

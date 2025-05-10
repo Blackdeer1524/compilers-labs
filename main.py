@@ -1,19 +1,20 @@
 from pprint import pprint
-from src.analysis.analyzer import Analyzer
 from src.scanning.scanner import Scanner
-from src.table_synthesis.synthesizer import SemanticsAnalyzer
+from src.analysis.analyzer import SyntacticAnalyzer
+from src.table_synthesis.semantics import SemanticsAnalyzer
 
 
 def main():
-    s = Scanner(open("./test.txt"))
-    a = Analyzer(s)
-    res = a.parse()
+    scanner = Scanner(open("./test.txt"))
+    syn_an = SyntacticAnalyzer(scanner)
+
+    res = syn_an.parse()
     # print("digraph {")
     # print(res.to_graphviz().replace("\r", "\\n"))
     # print("}")
 
-    sa = SemanticsAnalyzer()
-    pprint(sa.process_productions(res))
+    sem_an = SemanticsAnalyzer()
+    pprint(sem_an.process_productions(res))
 
 
 if __name__ == "__main__":
