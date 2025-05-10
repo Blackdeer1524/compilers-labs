@@ -91,7 +91,9 @@ class SemanticsAnalyzer:
                     self.store_error(
                         f"expected {kw_or.node_label} not to be None", kw_or.pos
                     )
-                return [self.collect_rule(rule)] + self.collect_alt_rules(alt_rules)
+                head: list[RULE_T] = [self.collect_rule(rule)]
+                tail: list[RULE_T] = self.collect_alt_rules(alt_rules)
+                return head + tail
 
     def collect_init_node(self, node: InitNode) -> ProductionNode | None:
         if node.value is None:
@@ -115,7 +117,9 @@ class SemanticsAnalyzer:
             if cur.value is None:
                 break
 
-            (kw_axiom, nonterm, kw_is, rhs, alt_rules, kw_end, next_prod) = cur.value
+            (kw_axiom, nonterm, kw_is, rhs_node, alt_rules, kw_end, next_prod) = (
+                cur.value
+            )
 
             is_axiom = self.collect_axiom(kw_axiom)
             lhs = self.collect_nonterm(nonterm)
@@ -124,7 +128,8 @@ class SemanticsAnalyzer:
                     f"expected {kw_is.node_label} not to be None", kw_is.pos
                 )
 
-            rhs = [self.collect_rule(rhs)] + self.collect_alt_rules(alt_rules)
+            head: list[RULE_T] = [self.collect_rule(rhs_node)]
+            rhs: list[RULE_T] = head + self.collect_alt_rules(alt_rules)
 
             if kw_end.value is None:
                 self.store_error(
