@@ -1,16 +1,28 @@
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 from dataclasses import dataclass
 
+from attr import field
+
 from src.common.abc import IGraphVizible
-from src.scanning.scanner import Keyword, Ident, EOF, QuotedStr
+from src.scanning.scanner import Keyword, Ident, EOF, QuotedStr, wrap
+from src.text.processors import Position
 
 
 # ================== AST NODES ==================
 # ================ Non-Terminals ================
 
 
+@dataclass(kw_only=True)
+class IASTNode(IGraphVizible):
+    start: Optional[Position] = field(init=False, default=None)
+
+    @property
+    def node_label(self) -> str:
+        return super().node_label + f"{wrap(str(self.start))}"
+
+
 @dataclass
-class InitNode(IGraphVizible):
+class InitNode(IASTNode):
     value: Optional[tuple["ProductionNode", "EOFNode"]] = None
 
     def to_graphviz(self) -> str:
@@ -32,7 +44,7 @@ class InitNode(IGraphVizible):
 
 
 @dataclass
-class ProductionNode(IGraphVizible):
+class ProductionNode(IASTNode):
     value: Optional[
         tuple[
             "AxiomNode",
@@ -66,7 +78,7 @@ class ProductionNode(IGraphVizible):
 
 
 @dataclass
-class RuleNode(IGraphVizible):
+class RuleNode(IASTNode):
     value: Optional[
         Union[
             tuple["TermNode | NonTermNode", "RuleTailNode"],
@@ -97,7 +109,7 @@ class RuleNode(IGraphVizible):
 
 
 @dataclass
-class RuleTailNode(IGraphVizible):
+class RuleTailNode(IASTNode):
     value: Optional[
         Union[
             RuleNode,
@@ -120,7 +132,7 @@ class RuleTailNode(IGraphVizible):
 
 
 @dataclass
-class RuleAltNode(IGraphVizible):
+class RuleAltNode(IASTNode):
     value: Optional[
         tuple[
             # Or
@@ -149,7 +161,7 @@ class RuleAltNode(IGraphVizible):
 
 
 @dataclass
-class AxiomNode(IGraphVizible):
+class AxiomNode(IASTNode):
     value: Optional[
         # Axiom
         "KeywordNode"
@@ -176,8 +188,8 @@ NON_TERMINAL = (
 
 
 @dataclass
-class KeywordNode(IGraphVizible):
-    kind: str
+class KeywordNode(IASTNode):
+    kind: Literal["axiom", "is", "or", "end", "epsilon"]
     value: Optional[Keyword] = None
 
     def to_graphviz(self) -> str:
@@ -197,7 +209,7 @@ class KeywordNode(IGraphVizible):
 
 
 @dataclass
-class NonTermNode(IGraphVizible):
+class NonTermNode(IASTNode):
     value: Optional[Ident] = None
 
     def to_graphviz(self) -> str:
@@ -214,7 +226,7 @@ class NonTermNode(IGraphVizible):
 
 
 @dataclass
-class TermNode(IGraphVizible):
+class TermNode(IASTNode):
     value: Optional[QuotedStr] = None
 
     def to_graphviz(self) -> str:
@@ -231,7 +243,7 @@ class TermNode(IGraphVizible):
 
 
 @dataclass
-class EOFNode(IGraphVizible):
+class EOFNode(IASTNode):
     value: Optional[EOF] = None
 
     def to_graphviz(self) -> str:

@@ -24,10 +24,12 @@ def transitions(
                 case Keyword(value="axiom"):
                     (prod, eof) = (ProductionNode(), EOFNode())
                     current.value = (prod, eof)
+                    current.start = token.start
                     return [prod, eof]
                 case Ident():
                     (prod, eof) = (ProductionNode(), EOFNode())
                     current.value = (prod, eof)
+                    current.start = token.start
                     return [prod, eof]
                 case QuotedStr():
                     return f"unexpected token: {token}"
@@ -44,6 +46,7 @@ def transitions(
                 case EOF():
                     (prod, eof) = (ProductionNode(), EOFNode())
                     current.value = (prod, eof)
+                    current.start = token.start
                     return [prod, eof]
         case ProductionNode():
             match token:
@@ -58,6 +61,7 @@ def transitions(
                         ProductionNode(),
                     )
                     current.value = res
+                    current.start = token.start
                     return list(res)
                 case Ident():
                     res = (
@@ -70,6 +74,7 @@ def transitions(
                         ProductionNode(),
                     )
                     current.value = res
+                    current.start = token.start
                     return list(res)
                 case QuotedStr():
                     return f"unexpected token: {token}"
@@ -84,6 +89,7 @@ def transitions(
                 case Keyword(value=other):
                     return f"unknown keyword: {other}"
                 case EOF():
+                    current.start = token.start
                     return []
         case RuleNode():
             match token:
@@ -93,11 +99,13 @@ def transitions(
                     nt = NonTermNode()
                     tail = RuleTailNode()
                     current.value = (nt, tail)
+                    current.start = token.start
                     return [nt, tail]
                 case QuotedStr():
                     t = TermNode()
                     tail = RuleTailNode()
                     current.value = (t, tail)
+                    current.start = token.start
                     return [t, tail]
                 case Keyword(value="or"):
                     return f"unexpected token: {token}"
@@ -105,6 +113,7 @@ def transitions(
                     return f"unexpected token: {token}"
                 case Keyword(value="epsilon"):
                     current.value = KeywordNode(kind="epsilon")
+                    current.start = token.start
                     return [current.value]
                 case Keyword(value="end"):
                     return f"unexpected token: {token}"
@@ -118,18 +127,23 @@ def transitions(
                     return f"unexpected token: {token}"
                 case Ident():
                     current.value = RuleNode()
+                    current.start = token.start
                     return [current.value]
                 case QuotedStr():
                     current.value = RuleNode()
+                    current.start = token.start
                     return [current.value]
                 case Keyword(value="or"):
+                    current.start = token.start
                     return []
                 case Keyword(value="is"):
                     return f"unexpected token: {token}"
                 case Keyword(value="epsilon"):
                     current.value = KeywordNode(kind="epsilon")
+                    current.start = token.start
                     return [current.value]
                 case Keyword(value="end"):
+                    current.start = token.start
                     return []
                 case Keyword(value=other):
                     return f"unknown keyword: {other}"
@@ -145,12 +159,14 @@ def transitions(
                     return f"unexpected token: {token}"
                 case Keyword(value="or"):
                     current.value = (KeywordNode(kind="or"), RuleNode(), RuleAltNode())
+                    current.start = token.start
                     return [current.value[0], current.value[1], current.value[2]]
                 case Keyword(value="is"):
                     return f"unexpected token: {token}"
                 case Keyword(value="epsilon"):
                     return f"unexpected token: {token}"
                 case Keyword(value="end"):
+                    current.start = token.start
                     return []
                 case Keyword(value=other):
                     return f"unknown keyword: {other}"
@@ -160,8 +176,10 @@ def transitions(
             match token:
                 case Keyword(value="axiom"):
                     current.value = KeywordNode(kind="axiom")
+                    current.start = token.start
                     return [current.value]
                 case Ident():
+                    current.start = token.start
                     return []
                 case QuotedStr():
                     return f"unexpected token: {token}"
@@ -181,26 +199,31 @@ def transitions(
             if type(token) != Keyword or token.value != "axiom":
                 return f"expected `axiom, {token} found"
             current.value = token
+            current.start = token.start
             return None
         case KeywordNode(kind="or"):
             if type(token) != Keyword or token.value != "or":
                 return f"expected `or, {token} found"
             current.value = token
+            current.start = token.start
             return None
         case KeywordNode(kind="is"):
             if type(token) != Keyword or token.value != "is":
                 return f"expected `is, {token} found"
             current.value = token
+            current.start = token.start
             return None
         case KeywordNode(kind="epsilon"):
             if type(token) != Keyword or token.value != "epsilon":
                 return f"expected `epsilon, {token} found"
             current.value = token
+            current.start = token.start
             return None
         case KeywordNode(kind="end"):
             if type(token) != Keyword or token.value != "end":
                 return f"expected `end, {token} found"
             current.value = token
+            current.start = token.start
             return None
         case KeywordNode(kind=unknown):
             return f"unknown keyword: {unknown}"
@@ -208,14 +231,17 @@ def transitions(
             if type(token) != Ident:
                 return f"expected NonTerm, but {type(token)} found"
             current.value = token
+            current.start = token.start
             return None
         case TermNode():
             if type(token) != QuotedStr:
                 return f"expected Term, but {type(token)} found"
             current.value = token
+            current.start = token.start
             return None
         case EOFNode():
             if type(token) != EOF:
                 return f"expected EOF, but {type(token)} found"
             current.value = token
+            current.start = token.start
             return None

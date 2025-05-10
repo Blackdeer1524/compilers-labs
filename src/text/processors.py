@@ -8,7 +8,7 @@ class Position:
     col: int
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class Segment:
     start: Position
     end: Position

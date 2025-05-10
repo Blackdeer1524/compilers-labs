@@ -133,7 +133,7 @@ class Scanner:
             self.skip_spaces()
             cur = self._text.peek()
             if cur is None:
-                yield EOF(self._text.position(), self._text.position())
+                yield EOF(start=self._text.position(), end=self._text.position())
                 return
             elif cur == "`":
                 start_p = self._text.position()
@@ -147,7 +147,11 @@ class Scanner:
                     value += cur
                     self._text.advance()
                 end_p = self._text.position()
-                yield Keyword(start_p, end_p, value)
+                yield Keyword(
+                    value,
+                    start=start_p,
+                    end=end_p,
+                )
             elif cur == '"':
                 start_p = self._text.position()
                 value = ""
@@ -187,7 +191,7 @@ class Scanner:
                     continue
                 end_p = self._text.position()
                 self._text.advance()
-                yield QuotedStr(start_p, end_p, value)
+                yield QuotedStr(value, start=start_p, end=end_p)
                 errored = False
                 continue
             elif cur.isalpha():
@@ -201,7 +205,7 @@ class Scanner:
                     value += cur
                     self._text.advance()
                 end_p = self._text.position()
-                yield Ident(start_p, end_p, value)
+                yield Ident(value, start=start_p, end=end_p)
             else:
                 if errored:
                     self._text.advance()
