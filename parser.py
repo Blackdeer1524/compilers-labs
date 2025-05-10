@@ -1,10 +1,10 @@
 import abc
 from collections import deque
+from pprint import pformat, pprint
 from typing import (
     Deque,
     Generator,
     Optional,
-    Sequence,
     TextIO,
     Union,
 )
@@ -80,6 +80,46 @@ class Segment:
     end: Position
 
 
+def wrap(s: str, lim: int = 20) -> str:
+    # res = pformat(s, width=20)
+    # return res.replace("\n", "\\n")
+    """
+    Wrap the input string s so that no line is longer than lim.
+    Breaks at whitespace where possible; words longer than lim are split.
+    """
+    words = s.split(sep=" ")
+    lines: list[str] = []
+    current: str = ""
+
+    for word in words:
+        # If adding the next word would exceed the limit...
+        if current:
+            sep = " "
+            projected_length = len(current) + 1 + len(word)
+        else:
+            sep = ""
+            projected_length = len(word)
+
+        if projected_length <= lim:
+            # Safe to add the word to current line
+            current += sep + word
+        else:
+            # Current line is full—push it
+            if current:
+                lines.append(current)
+            # If the word itself is too long, split it
+            while len(word) > lim:
+                lines.append(word[:lim])
+                word = word[lim:]
+            current = word
+
+    # Don't forget the last line
+    if current:
+        lines.append(current)
+
+    return "\r".join(lines)
+
+
 class IGraphVizible(abc.ABC):
     @property
     def node_name(self) -> str:
@@ -98,7 +138,9 @@ class QuotedStr(Segment, IGraphVizible):
     value: str
 
     def to_graphviz(self) -> str:
-        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
+        return '\t{} [label="{}"]\n'.format(
+            self.node_name, wrap(str(self)).replace('"', "'")
+        )
 
 
 @dataclass(frozen=True)
@@ -106,10 +148,9 @@ class Ident(Segment, IGraphVizible):
     value: str
 
     def to_graphviz(self) -> str:
-        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
-
-
-# ================= Keywords ===================
+        return '\t{} [label="{}"]\n'.format(
+            self.node_name, wrap(str(self)).replace('"', "'")
+        )
 
 
 @dataclass(frozen=True)
@@ -117,46 +158,17 @@ class Keyword(Segment, IGraphVizible):
     value: str
 
     def to_graphviz(self) -> str:
-        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
-
-
-# @dataclass(frozen=True)
-# class Axiom(Segment, IGraphVizible):
-#     def to_graphviz(self) -> str:
-#         return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
-#
-#
-# @dataclass(frozen=True)
-# class Is(Segment, IGraphVizible):
-#     def to_graphviz(self) -> str:
-#         return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
-#
-#
-# @dataclass(frozen=True)
-# class Or(Segment, IGraphVizible):
-#     def to_graphviz(self) -> str:
-#         return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
-#
-#
-# @dataclass(frozen=True)
-# class End(Segment, IGraphVizible):
-#     def to_graphviz(self) -> str:
-#         return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
-#
-#
-# @dataclass(frozen=True)
-# class Epsilon(Segment, IGraphVizible):
-#     def to_graphviz(self) -> str:
-#         return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
-
-
-# ============================================
+        return '\t{} [label="{}"]\n'.format(
+            self.node_name, wrap(str(self)).replace('"', "'")
+        )
 
 
 @dataclass(frozen=True)
 class EOF(Segment, IGraphVizible):
     def to_graphviz(self) -> str:
-        return '\t{} [label="{}"]\n'.format(self.node_name, str(self).replace('"', "'"))
+        return '\t{} [label="{}"]\n'.format(
+            self.node_name, wrap(str(self)).replace('"', "'")
+        )
 
 
 @dataclass(frozen=True)
@@ -214,7 +226,7 @@ class Scanner:
                 start_p = self._text.position()
                 errored = False
                 self._text.advance()
-                value = "`"
+                value = ""
                 while True:
                     cur = self._text.peek()
                     if cur is None or cur.isspace():
@@ -301,17 +313,19 @@ class InitNode(IGraphVizible):
 
     def to_graphviz(self) -> str:
         res = super().to_graphviz()
-        if self.value is None:
-            epsilon_name = f"𝓔{id(self)}"
-            res += f'\t{epsilon_name} [label="𝓔"]\n'
-            res += f"{self.node_name} -> {epsilon_name}"
-            return res
-
-        res += self.value[0].to_graphviz()
-        res += self.value[1].to_graphviz()
-
-        res += f"\t{self.node_name} -> {self.value[0].node_name}"
-        res += f"\t{self.node_name} -> {self.value[1].node_name}"
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+            case tuple():
+                res += "".join(child.to_graphviz() for child in self.value)
+                res += "".join(
+                    f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
+                )
+                res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                    " -> ".join(child.node_name for child in self.value)
+                )
         return res
 
 
@@ -336,7 +350,6 @@ class ProductionNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
@@ -361,7 +374,6 @@ class RuleNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
@@ -387,7 +399,6 @@ class RuleTailNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case _:
                 res += self.value.to_graphviz()
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
@@ -405,7 +416,6 @@ class RuleAltNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
@@ -428,7 +438,6 @@ class AxiomNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case _:
                 res += self.value.to_graphviz()
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
@@ -452,7 +461,6 @@ class KWAxiomNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case _:
                 res += self.value.to_graphviz()
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
@@ -470,7 +478,6 @@ class KWOrNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case _:
                 res += self.value.to_graphviz()
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
@@ -488,7 +495,6 @@ class KWIsNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case _:
                 res += self.value.to_graphviz()
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
@@ -506,7 +512,6 @@ class KWEpsilonNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case _:
                 res += self.value.to_graphviz()
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
@@ -524,7 +529,6 @@ class KWEndNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case _:
                 res += self.value.to_graphviz()
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
@@ -548,7 +552,6 @@ class IdentNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case _:
                 res += self.value.to_graphviz()
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
@@ -566,7 +569,6 @@ class QStrNode(IGraphVizible):
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
                 res += f"{self.node_name} -> {epsilon_name}"
-                return res
             case _:
                 res += self.value.to_graphviz()
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
@@ -603,11 +605,11 @@ class Analyzer:
     @staticmethod
     def transitions(
         current: NON_TERMINAL | TERMINAL, token: Token
-    ) -> Sequence[NON_TERMINAL | TERMINAL] | str | None:
+    ) -> list[NON_TERMINAL | TERMINAL] | str | None:
         match current:
             case InitNode():
                 match token:
-                    case Keyword(value="`axiom"):
+                    case Keyword(value="axiom"):
                         (prod, eof) = (ProductionNode(), EOFNode())
                         current.value = (prod, eof)
                         return [prod, eof]
@@ -617,13 +619,13 @@ class Analyzer:
                         return [prod, eof]
                     case QuotedStr():
                         return f"unexpected token: {token}"
-                    case Keyword(value="`or"):
+                    case Keyword(value="or"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`is"):
+                    case Keyword(value="is"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`epsilon"):
+                    case Keyword(value="epsilon"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`end"):
+                    case Keyword(value="end"):
                         return f"unexpected token: {token}"
                     case Keyword(value=other):
                         return f"unknown keyword: {other}"
@@ -633,7 +635,7 @@ class Analyzer:
                         return [prod, eof]
             case ProductionNode():
                 match token:
-                    case Keyword(value="`axiom"):
+                    case Keyword(value="axiom"):
                         res = (
                             AxiomNode(),
                             IdentNode(),
@@ -644,7 +646,7 @@ class Analyzer:
                             ProductionNode(),
                         )
                         current.value = res
-                        return res
+                        return list(res)
                     case Ident():
                         res = (
                             AxiomNode(),
@@ -656,16 +658,16 @@ class Analyzer:
                             ProductionNode(),
                         )
                         current.value = res
-                        return res
+                        return list(res)
                     case QuotedStr():
                         return f"unexpected token: {token}"
-                    case Keyword(value="`or"):
+                    case Keyword(value="or"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`is"):
+                    case Keyword(value="is"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`epsilon"):
+                    case Keyword(value="epsilon"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`end"):
+                    case Keyword(value="end"):
                         return f"unexpected token: {token}"
                     case Keyword(value=other):
                         return f"unknown keyword: {other}"
@@ -673,7 +675,7 @@ class Analyzer:
                         return []
             case RuleNode():
                 match token:
-                    case Keyword(value="`axiom"):
+                    case Keyword(value="axiom"):
                         return f"unexpected token: {token}"
                     case Ident():
                         nt = IdentNode()
@@ -685,14 +687,14 @@ class Analyzer:
                         tail = RuleTailNode()
                         current.value = (t, tail)
                         return [t, tail]
-                    case Keyword(value="`or"):
+                    case Keyword(value="or"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`is"):
+                    case Keyword(value="is"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`epsilon"):
+                    case Keyword(value="epsilon"):
                         current.value = KWEpsilonNode()
                         return [current.value]
-                    case Keyword(value="`end"):
+                    case Keyword(value="end"):
                         return f"unexpected token: {token}"
                     case Keyword(value=other):
                         return f"unknown keyword: {other}"
@@ -700,7 +702,7 @@ class Analyzer:
                         return f"unexpected token: {token}"
             case RuleTailNode():
                 match token:
-                    case Keyword(value="`axiom"):
+                    case Keyword(value="axiom"):
                         return f"unexpected token: {token}"
                     case Ident():
                         current.value = RuleNode()
@@ -708,14 +710,14 @@ class Analyzer:
                     case QuotedStr():
                         current.value = RuleNode()
                         return [current.value]
-                    case Keyword(value="`or"):
+                    case Keyword(value="or"):
                         return []
-                    case Keyword(value="`is"):
+                    case Keyword(value="is"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`epsilon"):
+                    case Keyword(value="epsilon"):
                         current.value = KWEpsilonNode()
                         return [current.value]
-                    case Keyword(value="`end"):
+                    case Keyword(value="end"):
                         return []
                     case Keyword(value=other):
                         return f"unknown keyword: {other}"
@@ -723,20 +725,20 @@ class Analyzer:
                         return f"unexpected token: {token}"
             case RuleAltNode():
                 match token:
-                    case Keyword(value="`axiom"):
+                    case Keyword(value="axiom"):
                         return f"unexpected token: {token}"
                     case Ident():
                         return f"unexpected token: {token}"
                     case QuotedStr():
                         return f"unexpected token: {token}"
-                    case Keyword(value="`or"):
+                    case Keyword(value="or"):
                         current.value = (KWOrNode(), RuleNode(), RuleAltNode())
                         return [current.value[0], current.value[1], current.value[2]]
-                    case Keyword(value="`is"):
+                    case Keyword(value="is"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`epsilon"):
+                    case Keyword(value="epsilon"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`end"):
+                    case Keyword(value="end"):
                         return []
                     case Keyword(value=other):
                         return f"unknown keyword: {other}"
@@ -744,20 +746,20 @@ class Analyzer:
                         return f"unexpected token: {token}"
             case AxiomNode():
                 match token:
-                    case Keyword(value="`axiom"):
+                    case Keyword(value="axiom"):
                         current.value = KWAxiomNode()
                         return [current.value]
                     case Ident():
                         return []
                     case QuotedStr():
                         return f"unexpected token: {token}"
-                    case Keyword(value="`or"):
+                    case Keyword(value="or"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`is"):
+                    case Keyword(value="is"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`epsilon"):
+                    case Keyword(value="epsilon"):
                         return f"unexpected token: {token}"
-                    case Keyword(value="`end"):
+                    case Keyword(value="end"):
                         return f"unexpected token: {token}"
                     case Keyword(value=other):
                         return f"unknown keyword: {other}"
@@ -765,42 +767,42 @@ class Analyzer:
                         return f"unexpected token: {token}"
             case KWAxiomNode():
                 if type(token) != Keyword or token.value != "axiom":
-                    return (f"expected `axiom, {token} found")
+                    return f"expected `axiom, {token} found"
                 current.value = token
                 return None
             case KWOrNode():
                 if type(token) != Keyword or token.value != "or":
-                    return (f"expected `or, {token} found")
+                    return f"expected `or, {token} found"
                 current.value = token
                 return None
             case KWIsNode():
                 if type(token) != Keyword or token.value != "is":
-                    return (f"expected `is, {token} found")
+                    return f"expected `is, {token} found"
                 current.value = token
                 return None
             case KWEpsilonNode():
                 if type(token) != Keyword or token.value != "epsilon":
-                    return (f"expected `epsilon, {token} found")
+                    return f"expected `epsilon, {token} found"
                 current.value = token
                 return None
             case KWEndNode():
                 if type(token) != Keyword or token.value != "end":
-                    return (f"expected `end, {token} found")
+                    return f"expected `end, {token} found"
                 current.value = token
                 return None
             case IdentNode():
                 if type(token) != Ident:
-                    return (f"expected NonTerm, but {type(token)} found")
+                    return f"expected NonTerm, but {type(token)} found"
                 current.value = token
                 return None
             case QStrNode():
                 if type(token) != QuotedStr:
-                    return (f"expected Term, but {type(token)} found")
+                    return f"expected Term, but {type(token)} found"
                 current.value = token
                 return None
             case EOFNode():
                 if type(token) != EOF:
-                    return (f"expected EOF, but {type(token)} found")
+                    return f"expected EOF, but {type(token)} found"
                 current.value = token
                 return None
 
@@ -820,9 +822,11 @@ class Analyzer:
                     case _:
                         rule = Analyzer.transitions(cur_node, token)
                         match rule:
-                            case None: break
-                            case str(): raise RuntimeError(rule)
-                            case Sequence(): 
+                            case None:
+                                break
+                            case str():
+                                raise RuntimeError(rule)
+                            case list():
                                 for v in reversed(rule):
                                     d.appendleft((v, depth + 1))
         return init
@@ -833,7 +837,7 @@ def main():
     a = Analyzer(s)
     res = a.parse()
     print("digraph {")
-    print(res.to_graphviz())
+    print(res.to_graphviz().replace("\r", "\\n"))
     print("}")
 
 
