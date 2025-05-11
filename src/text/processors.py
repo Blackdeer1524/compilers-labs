@@ -1,5 +1,5 @@
 from typing import Optional, TextIO
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -10,8 +10,8 @@ class Position:
 
 @dataclass(frozen=True, kw_only=True)
 class Segment:
-    start: Position
-    end: Position
+    start: Position = field(repr=False)
+    end: Position = field(repr=False)
 
 
 class Text:
