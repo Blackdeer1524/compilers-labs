@@ -1,6 +1,6 @@
 from collections import defaultdict
 from functools import reduce
-from typing import DefaultDict, Literal
+from typing import DefaultDict
 from src.scanning.scanner import Ident, QuotedStr
 from src.table_synthesis.semantics import RULE_TAIL_T, ProductionInfo
 from src.text.processors import Position
@@ -10,20 +10,16 @@ class SynthError(Exception):
     def __init__(self, message: str):
         super().__init__(message)
 
+DIRECTIVE_PREFIX = "#"
+EOF_DIRECTIVE = f"{DIRECTIVE_PREFIX}EOF"
 
-QUOTED_STRING_DIRECTIVE = "#QStr"
-IDENTIFIER_DIRECTIVE = "#Ident"
-EOF_DIRECTIVE = "#EOF"
-
-LL1_TABLE_T = dict[
-    str, DefaultDict[str | Literal["#QStr", "#Ident", "#QStr"], RULE_TAIL_T | None]
-]
+LL1_TABLE_T = dict[str, DefaultDict[str, RULE_TAIL_T | None]]
 
 INIT_NODE_NAME = "#Init"
 
 
 def render_table(table: LL1_TABLE_T) -> str:
-    init: set[str | Literal["#QStr", "#Ident", "#QStr"]] = set()
+    init: set[str] = set()
     keys = list(
         reduce(lambda l, r: l.union(r), (set(v.keys()) for v in table.values()), init)
     )

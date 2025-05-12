@@ -10,9 +10,9 @@ def main():
     syn_an = SyntacticAnalyzer(scanner)
 
     res = syn_an.parse()
-    # print("digraph {")
-    # print(res.to_graphviz().replace("\r", "\\n"))
-    # print("}")
+    print("digraph {")
+    print(res.to_graphviz().replace("\r", "\\n"))
+    print("}")
 
     sem_an = SemanticsAnalyzer()
     match sem_an.process_productions(res):

@@ -1,24 +1,27 @@
-from typing import Literal, Optional, Union
-from dataclasses import dataclass
-
-from attr import field
+from typing import Optional, Union
+from dataclasses import dataclass, field
 
 from src.common.abc import IGraphVizible
-from src.scanning.scanner import Keyword, Ident, EOF, QuotedStr, wrap
+from src.scanning.scanner import wrap
 from src.text.processors import Position
 
+# every scanner has to provide them
+from src.scanning.scanner import Keyword, EOF
+
+# specific to a language
+from src.scanning.scanner import Ident, QuotedStr
 
 # ================== AST NODES ==================
 # ================ Non-Terminals ================
 
 
-@dataclass(kw_only=True)
+@dataclass
 class IASTNode(IGraphVizible):
     pos: Optional[Position] = field(init=False, default=None)
 
     @property
     def node_label(self) -> str:
-        return super().node_label + wrap(f"{str(self.pos)})")
+        return super().node_label + wrap(f"({str(self.pos)}))")
 
 
 @dataclass
@@ -49,12 +52,10 @@ class ProductionNode(IASTNode):
         tuple[
             "AxiomNode",
             "NonTermNode",
-            # Is
-            "KeywordNode",
+            "KeywordIsNode",
             "RuleNode",
             "RuleAltNode",
-            # End
-            "KeywordNode",
+            "KeywordEndNode",
             "ProductionNode",
         ]
     ] = None
@@ -82,8 +83,7 @@ class RuleNode(IASTNode):
     value: Optional[
         Union[
             tuple["TermNode | NonTermNode", "RuleTailNode"],
-            # Epsilon
-            "KeywordNode",
+            "KeywordEpsilonNode",
         ]
     ] = None
 
@@ -111,8 +111,7 @@ class RuleNode(IASTNode):
 @dataclass
 class RuleTailNode(IASTNode):
     value: Optional[
-        tuple["NonTermNode", "RuleTailNode"] |
-        tuple["TermNode", "RuleTailNode"] 
+        tuple["NonTermNode", "RuleTailNode"] | tuple["TermNode", "RuleTailNode"]
     ] = None
 
     def to_graphviz(self) -> str:
@@ -137,8 +136,7 @@ class RuleTailNode(IASTNode):
 class RuleAltNode(IASTNode):
     value: Optional[
         tuple[
-            # Or
-            "KeywordNode",
+            "KeywordOrNode",
             "RuleNode",
             "RuleAltNode",
         ]
@@ -164,10 +162,7 @@ class RuleAltNode(IASTNode):
 
 @dataclass
 class AxiomNode(IASTNode):
-    value: Optional[
-        # Axiom
-        "KeywordNode"
-    ] = None
+    value: Optional["KeywordAxiomNode"] = None
 
     def to_graphviz(self) -> str:
         res = super().to_graphviz()
@@ -190,8 +185,75 @@ NON_TERMINAL = (
 
 
 @dataclass
-class KeywordNode(IASTNode):
-    kind: Literal["axiom", "is", "or", "end", "epsilon"]
+class KeywordAxiomNode(IASTNode):
+    value: Optional[Keyword] = None
+
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
+
+@dataclass
+class KeywordIsNode(IASTNode):
+    value: Optional[Keyword] = None
+
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
+
+@dataclass
+class KeywordOrNode(IASTNode):
+    value: Optional[Keyword] = None
+
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
+
+@dataclass
+class KeywordEndNode(IASTNode):
+    value: Optional[Keyword] = None
+
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
+
+@dataclass
+class KeywordEpsilonNode(IASTNode):
     value: Optional[Keyword] = None
 
     def to_graphviz(self) -> str:
@@ -262,7 +324,14 @@ class EOFNode(IASTNode):
         return res
 
 
-TERMINAL = KeywordNode | NonTermNode | TermNode | EOFNode
+KEYWORD = (
+    KeywordAxiomNode
+    | KeywordEndNode
+    | KeywordEpsilonNode
+    | KeywordIsNode
+    | KeywordOrNode
+)
+TERMINAL = KEYWORD | NonTermNode | TermNode | EOFNode
 
 # ===============================================
 
@@ -273,7 +342,11 @@ __all__ = [
     "RuleTailNode",
     "RuleAltNode",
     "AxiomNode",
-    "KeywordNode",
+    "KeywordAxiomNode",
+    "KeywordEndNode",
+    "KeywordEpsilonNode",
+    "KeywordIsNode",
+    "KeywordOrNode",
     "NonTermNode",
     "TermNode",
     "EOFNode",

@@ -68,25 +68,18 @@ class SemanticsAnalyzer:
                 if non_term is None:
                     return self.collect_rule_tail(tail)
                 return [non_term] + self.collect_rule_tail(tail)
-            case KeywordNode(kind="epsilon"):
+            case KeywordEpsilonNode():
                 return "epsilon"
-            case KeywordNode(kind=unknown):
-                self.store_error(f"unexpected keyword: {unknown}", node.pos)
-                return []
 
     def collect_alt_rules(self, node: RuleAltNode) -> list[RULE_T]:
         match node.value:
             case None:
                 return []
             case (
-                KeywordNode() as kw_or,
+                KeywordOrNode() as kw_or,
                 RuleNode() as rule,
                 RuleAltNode() as alt_rules,
             ):
-                if kw_or.kind != "or":
-                    self.store_error(
-                        f'expected "or" keyword, but "{kw_or.kind}" found', kw_or.pos
-                    )
                 if kw_or.value is None:
                     self.store_error(
                         f"expected {kw_or.node_label} not to be None", kw_or.pos

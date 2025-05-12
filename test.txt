@@ -1,21 +1,5 @@
-`axiom Production   `is Axiom NonTerm "`is" Rule RuleAlt "`end" Production 
-                    `or `epsilon `end
-
-Rule        `is RuleItem RuleTail `end
-
-RuleItem    `is NonTerm 
-            `or Term `end
-
-RuleTail    `is RuleItem RuleTail 
-            `or `epsilon `end
-
-RuleAlt     `is "`or" Rule RuleAlt
-            `or `epsilon `end
-
-Axiom       `is "`axiom"
-            `or `epsilon `end
-
-NonTerm `is "#IDENT" `end
-
-Term    `is "#QStr" `end
-
+F  `is "n" `or "(" E ")" `end
+T  `is F T1 `end
+T1 `is "*" F T1 `or `epsilon `end
+`axiom E  `is T E1 `end
+E1 `is "+" T E1 `or `epsilon `end
