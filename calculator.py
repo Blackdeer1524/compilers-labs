@@ -1,7 +1,19 @@
-from src.analysis.generated_transitions import E1Node, FNode, InitNode, ENode, EOFNode, KeywordAsteriskNode, KeywordLeftParenNode, KeywordPlusNode, KeywordRightParenNode, NumberNode, T1Node, TNode
-from src.scanning.custom_scanner import Scanner
-from src.analysis.generated_analyzer import SyntacticAnalyzer
-
+from src.analysis.task_transitions import (
+    E1Node,
+    FNode,
+    InitNode,
+    ENode,
+    EOFNode,
+    KeywordAsteriskNode,
+    KeywordLeftParenNode,
+    KeywordPlusNode,
+    KeywordRightParenNode,
+    NumberNode,
+    T1Node,
+    TNode,
+)
+from src.scanning.task_scanner import Scanner
+from src.analysis.task_analyzer import SyntacticAnalyzer
 
 
 def to_string(node: InitNode | ENode | E1Node | TNode | FNode | T1Node) -> str:
@@ -20,7 +32,7 @@ def to_string(node: InitNode | ENode | E1Node | TNode | FNode | T1Node) -> str:
                     return ""
         case E1Node():
             match node.value:
-                case tuple((KeywordPlusNode(), TNode() as tnode, E1Node() as e1node)) :
+                case tuple((KeywordPlusNode(), TNode() as tnode, E1Node() as e1node)):
                     return "+" + to_string(tnode) + to_string(e1node)
                 case None:
                     return ""
@@ -32,9 +44,13 @@ def to_string(node: InitNode | ENode | E1Node | TNode | FNode | T1Node) -> str:
                     return ""
         case FNode():
             match node.value:
-                case ( KeywordLeftParenNode(), ENode() as enode, KeywordRightParenNode() ):
+                case (
+                    KeywordLeftParenNode(),
+                    ENode() as enode,
+                    KeywordRightParenNode(),
+                ):
                     return "(" + to_string(enode) + ")"
-                case (NumberNode() as nnode, ):
+                case (NumberNode() as nnode,):
                     return str(nnode.value.value)
                 case None:
                     return ""
