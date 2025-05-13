@@ -2,12 +2,12 @@
                     `or `epsilon `end
 
 Rule        `is RuleItem RuleTail 
-            `or `epsilon `end
+            `or "`epsilon" `end
 
 RuleItem    `is NonTerm 
             `or Term `end
 
-RuleTail    `is Rule 
+RuleTail    `is RuleItem RuleTail 
             `or `epsilon `end
 
 RuleAlt     `is "`or" Rule RuleAlt
