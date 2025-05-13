@@ -14,7 +14,6 @@ from src.scanning.scanner import Ident, QuotedStr
 # ================== AST NODES ==================
 # ================ Non-Terminals ================
 
-
 @dataclass
 class IASTNode(IGraphVizible):
     pos: Optional[Position] = field(init=False, default=None)
@@ -38,11 +37,11 @@ class InitNode(IASTNode):
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
-                    f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
-                )
+                        f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
+                        )
                 res += "\t{{rank=same; {} [style=invis]}}\n".format(
-                    " -> ".join(child.node_name for child in self.value)
-                )
+                        " -> ".join(child.node_name for child in self.value)
+                        )
         return res
 
 

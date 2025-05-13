@@ -93,6 +93,18 @@ class Scanner:
                 self._text.advance()
                 end_p = self._text.position()
                 yield Keyword("+", start=start_p, end=end_p)
+            elif cur == "(":
+                errored = False
+                start_p = self._text.position()
+                self._text.advance()
+                end_p = self._text.position()
+                yield Keyword("(", start=start_p, end=end_p)
+            elif cur == ")":
+                errored = False
+                start_p = self._text.position()
+                self._text.advance()
+                end_p = self._text.position()
+                yield Keyword(")", start=start_p, end=end_p)
             elif cur == "*":
                 errored = False
                 start_p = self._text.position()

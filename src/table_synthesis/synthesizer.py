@@ -132,63 +132,34 @@ class Synthesizer:
                                         for after in rule[i + 1 :]:
                                             match after:
                                                 case QuotedStr():
-                                                    prev_len = len(
-                                                        self.follow_sets[cur.value]
-                                                    )
-                                                    self.follow_sets[cur.value].add(
-                                                        after.value
-                                                    )
-                                                    if (
-                                                        len(self.follow_sets[cur.value])
-                                                        != prev_len
-                                                    ):
+                                                    prev_len = len( self.follow_sets[cur.value])
+                                                    self.follow_sets[cur.value].add( after.value)
+                                                    if len(self.follow_sets[cur.value]) != prev_len:
                                                         updated = True
                                                     broke_the_loop = True
                                                     break
                                                 case Ident():
-                                                    prev_len = len(
-                                                        self.follow_sets[cur.value]
-                                                    )
+                                                    prev_len = len(self.follow_sets[cur.value])
 
-                                                    assert (
-                                                        after.value in self.productions
-                                                    )
-                                                    self.follow_sets[cur.value].update(
-                                                        self.first_sets[after.value]
-                                                    )
+                                                    assert after.value in self.productions
+                                                    self.follow_sets[cur.value].update(self.first_sets[after.value])
 
-                                                    if (
-                                                        len(self.follow_sets[cur.value])
-                                                        != prev_len
-                                                    ):
+                                                    if len(self.follow_sets[cur.value]) != prev_len:
                                                         updated = True
-                                                    if (
-                                                        after.value
-                                                        not in self.accepts_epsilon
-                                                    ):
+                                                    if after.value not in self.accepts_epsilon:
                                                         broke_the_loop = True
                                                         break
-                                        if (
-                                            not broke_the_loop
-                                            and rule[-1] in self.accepts_epsilon
-                                        ):
+
+                                        if not broke_the_loop and rule[-1].value in self.accepts_epsilon:
                                             prev_len = len(self.follow_sets[cur.value])
-                                            self.follow_sets[cur.value].update(
-                                                self.follow_sets[nonterm]
-                                            )
-                                            if (
-                                                len(self.follow_sets[cur.value])
-                                                != prev_len
-                                            ):
+                                            self.follow_sets[cur.value].update(self.follow_sets[nonterm])
+                                            if len(self.follow_sets[cur.value]) != prev_len:
                                                 updated = True
                                     case QuotedStr():
                                         continue
                             last = rule[-1]
-
                             prev_len = len(self.follow_sets[last.value])
-                            self.follow_sets[last.value].update(
-                                self.follow_sets[nonterm]
-                            )
+                            self.follow_sets[last.value].update(self.follow_sets[nonterm])
                             if len(self.follow_sets[last.value]) != prev_len:
                                 updated = True
             if not updated:

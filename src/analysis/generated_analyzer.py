@@ -15,9 +15,7 @@ class SyntacticAnalyzer:
         d: Deque[tuple[TERMINAL | NON_TERMINAL, int]] = deque([(init, 0)])
         for token in self.scanner:
             if len(d) == 0:
-                raise RuntimeError(
-                    "stack is exhausted, but there are still tokens left!"
-                )
+                raise RuntimeError("stack is exhausted, but there are still tokens left!")
             while len(d) > 0:
                 cur_node, depth = d.pop()
                 match token:

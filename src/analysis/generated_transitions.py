@@ -1,14 +1,14 @@
-# ====================
-# |   |*|#EOF|#Number|+|)|(|
+# ========================================
+# |   |#EOF|(|*|#Number|+|)|
 # |---|---|---|---|---|---|---|
-# |F|---|---|#Number|---|---|( E )|
-# |T|---|---|F T1|---|---|F T1|
-# |T1|* F T1|---|---|𝓔|---|---|
-# |E|---|---|T E1|---|---|T E1|
-# |E1|---|𝓔|---|+ T E1|𝓔|---|
-# |Init|---|---|E #EOF|---|---|E #EOF|
+# |F|---|( E )|---|#Number|---|---|
+# |T|---|F T1|---|F T1|---|---|
+# |T1|𝓔|---|* F T1|---|𝓔|𝓔|
+# |E|---|T E1|---|T E1|---|---|
+# |E1|𝓔|---|---|---|+ T E1|𝓔|
+# |Init|---|E #EOF|---|E #EOF|---|---|
 # 
-# ====================
+# ========================================
 from typing import Optional
 from dataclasses import dataclass, field
 
@@ -44,15 +44,16 @@ class FNode(IASTNode):
             case None:
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
-                res += f"{self.node_name} -> {epsilon_name}"
+                res += f"\t{self.node_name} -> {epsilon_name}\n"
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
                     f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
                 )
-                res += "\t{{rank=same; {} [style=invis]}}\n".format(
-                    " -> ".join(child.node_name for child in self.value)
-                )
+                if len(self.value) > 1:
+                    res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                        " -> ".join(child.node_name for child in self.value)
+                    )
         return res
 
 @dataclass
@@ -65,15 +66,16 @@ class TNode(IASTNode):
             case None:
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
-                res += f"{self.node_name} -> {epsilon_name}"
+                res += f"\t{self.node_name} -> {epsilon_name}\n"
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
                     f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
                 )
-                res += "\t{{rank=same; {} [style=invis]}}\n".format(
-                    " -> ".join(child.node_name for child in self.value)
-                )
+                if len(self.value) > 1:
+                    res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                        " -> ".join(child.node_name for child in self.value)
+                    )
         return res
 
 @dataclass
@@ -86,15 +88,16 @@ class T1Node(IASTNode):
             case None:
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
-                res += f"{self.node_name} -> {epsilon_name}"
+                res += f"\t{self.node_name} -> {epsilon_name}\n"
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
                     f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
                 )
-                res += "\t{{rank=same; {} [style=invis]}}\n".format(
-                    " -> ".join(child.node_name for child in self.value)
-                )
+                if len(self.value) > 1:
+                    res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                        " -> ".join(child.node_name for child in self.value)
+                    )
         return res
 
 @dataclass
@@ -107,15 +110,16 @@ class ENode(IASTNode):
             case None:
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
-                res += f"{self.node_name} -> {epsilon_name}"
+                res += f"\t{self.node_name} -> {epsilon_name}\n"
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
                     f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
                 )
-                res += "\t{{rank=same; {} [style=invis]}}\n".format(
-                    " -> ".join(child.node_name for child in self.value)
-                )
+                if len(self.value) > 1:
+                    res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                        " -> ".join(child.node_name for child in self.value)
+                    )
         return res
 
 @dataclass
@@ -128,15 +132,16 @@ class E1Node(IASTNode):
             case None:
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
-                res += f"{self.node_name} -> {epsilon_name}"
+                res += f"\t{self.node_name} -> {epsilon_name}\n"
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
                     f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
                 )
-                res += "\t{{rank=same; {} [style=invis]}}\n".format(
-                    " -> ".join(child.node_name for child in self.value)
-                )
+                if len(self.value) > 1:
+                    res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                        " -> ".join(child.node_name for child in self.value)
+                    )
         return res
 
 @dataclass
@@ -149,15 +154,16 @@ class InitNode(IASTNode):
             case None:
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\t{epsilon_name} [label="𝓔"]\n'
-                res += f"{self.node_name} -> {epsilon_name}"
+                res += f"\t{self.node_name} -> {epsilon_name}\n"
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
                     f"\t{self.node_name} -> {child.node_name}\n" for child in self.value
                 )
-                res += "\t{{rank=same; {} [style=invis]}}\n".format(
-                    " -> ".join(child.node_name for child in self.value)
-                )
+                if len(self.value) > 1:
+                    res += "\t{{rank=same; {} [style=invis]}}\n".format(
+                        " -> ".join(child.node_name for child in self.value)
+                    )
         return res
 
 NON_TERMINAL = FNode | TNode | T1Node | ENode | E1Node | InitNode
@@ -200,25 +206,7 @@ class EOFNode(IASTNode):
 
 # ============== KEYWORD NODES =============
 @dataclass
-class KeywordPlusNode(IASTNode):
-
-    value: Optional["Keyword"] = None
-
-    def to_graphviz(self) -> str:
-        res = super().to_graphviz()
-        match self.value:
-            case None:
-                epsilon_name = f"𝓔{id(self)}"
-                res += f'\t{epsilon_name} [label="𝓔"]\n'
-                res += f"{self.node_name} -> {epsilon_name}"
-                return res
-            case _:
-                res += self.value.to_graphviz()
-                res += f"\t{self.node_name} -> {self.value.node_name}\n"
-        return res
-
-@dataclass
-class KeywordLeftParenNode(IASTNode):
+class KeywordRightParenNode(IASTNode):
 
     value: Optional["Keyword"] = None
 
@@ -254,7 +242,7 @@ class KeywordAsteriskNode(IASTNode):
         return res
 
 @dataclass
-class KeywordRightParenNode(IASTNode):
+class KeywordLeftParenNode(IASTNode):
 
     value: Optional["Keyword"] = None
 
@@ -271,16 +259,44 @@ class KeywordRightParenNode(IASTNode):
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
         return res
 
-TERMINAL = NumberNode | EOFNode | KeywordPlusNode | KeywordLeftParenNode | KeywordAsteriskNode | KeywordRightParenNode
+@dataclass
+class KeywordPlusNode(IASTNode):
+
+    value: Optional["Keyword"] = None
+
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
+TERMINAL = NumberNode | EOFNode | KeywordRightParenNode | KeywordAsteriskNode | KeywordLeftParenNode | KeywordPlusNode
 def transitions(
     current: NON_TERMINAL | TERMINAL, token: Token
 ) -> list[NON_TERMINAL | TERMINAL] | str | None:
     match current:
         case FNode():
             match token:
-                case Keyword(value="*"):
-                    return f"unexpected token: {token}" 
                 case EOF():
+                    return f"unexpected token: {token}" 
+                case Keyword(value="("):
+                    res = (
+                        KeywordLeftParenNode(),
+                        ENode(),
+                        KeywordRightParenNode(),
+                    )
+
+                    current.value = res
+                    current.pos = token.start
+                    return list(res)
+                case Keyword(value="*"):
                     return f"unexpected token: {token}" 
                 case Number():
                     res = (
@@ -294,23 +310,22 @@ def transitions(
                     return f"unexpected token: {token}" 
                 case Keyword(value=")"):
                     return f"unexpected token: {token}" 
+                case Keyword(value=unexpected):
+                    return f"unknown keyword: {unexpected}" 
+        case TNode():
+            match token:
+                case EOF():
+                    return f"unexpected token: {token}" 
                 case Keyword(value="("):
                     res = (
-                        KeywordLeftParenNode(),
-                        ENode(),
-                        KeywordRightParenNode(),
+                        FNode(),
+                        T1Node(),
                     )
 
                     current.value = res
                     current.pos = token.start
                     return list(res)
-                case Keyword(value=unexpected):
-                    return f"unknown keyword: {unexpected}" 
-        case TNode():
-            match token:
                 case Keyword(value="*"):
-                    return f"unexpected token: {token}" 
-                case EOF():
                     return f"unexpected token: {token}" 
                 case Number():
                     res = (
@@ -325,19 +340,15 @@ def transitions(
                     return f"unexpected token: {token}" 
                 case Keyword(value=")"):
                     return f"unexpected token: {token}" 
-                case Keyword(value="("):
-                    res = (
-                        FNode(),
-                        T1Node(),
-                    )
-
-                    current.value = res
-                    current.pos = token.start
-                    return list(res)
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
         case T1Node():
             match token:
+                case EOF():
+                    current.pos = token.start
+                    return []
+                case Keyword(value="("):
+                    return f"unexpected token: {token}" 
                 case Keyword(value="*"):
                     res = (
                         KeywordAsteriskNode(),
@@ -348,24 +359,30 @@ def transitions(
                     current.value = res
                     current.pos = token.start
                     return list(res)
-                case EOF():
-                    return f"unexpected token: {token}" 
                 case Number():
                     return f"unexpected token: {token}" 
                 case Keyword(value="+"):
                     current.pos = token.start
                     return []
                 case Keyword(value=")"):
-                    return f"unexpected token: {token}" 
-                case Keyword(value="("):
-                    return f"unexpected token: {token}" 
+                    current.pos = token.start
+                    return []
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
         case ENode():
             match token:
-                case Keyword(value="*"):
-                    return f"unexpected token: {token}" 
                 case EOF():
+                    return f"unexpected token: {token}" 
+                case Keyword(value="("):
+                    res = (
+                        TNode(),
+                        E1Node(),
+                    )
+
+                    current.value = res
+                    current.pos = token.start
+                    return list(res)
+                case Keyword(value="*"):
                     return f"unexpected token: {token}" 
                 case Number():
                     res = (
@@ -380,24 +397,17 @@ def transitions(
                     return f"unexpected token: {token}" 
                 case Keyword(value=")"):
                     return f"unexpected token: {token}" 
-                case Keyword(value="("):
-                    res = (
-                        TNode(),
-                        E1Node(),
-                    )
-
-                    current.value = res
-                    current.pos = token.start
-                    return list(res)
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
         case E1Node():
             match token:
-                case Keyword(value="*"):
-                    return f"unexpected token: {token}" 
                 case EOF():
                     current.pos = token.start
                     return []
+                case Keyword(value="("):
+                    return f"unexpected token: {token}" 
+                case Keyword(value="*"):
+                    return f"unexpected token: {token}" 
                 case Number():
                     return f"unexpected token: {token}" 
                 case Keyword(value="+"):
@@ -413,15 +423,22 @@ def transitions(
                 case Keyword(value=")"):
                     current.pos = token.start
                     return []
-                case Keyword(value="("):
-                    return f"unexpected token: {token}" 
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
         case InitNode():
             match token:
-                case Keyword(value="*"):
-                    return f"unexpected token: {token}" 
                 case EOF():
+                    return f"unexpected token: {token}" 
+                case Keyword(value="("):
+                    res = (
+                        ENode(),
+                        EOFNode(),
+                    )
+
+                    current.value = res
+                    current.pos = token.start
+                    return list(res)
+                case Keyword(value="*"):
                     return f"unexpected token: {token}" 
                 case Number():
                     res = (
@@ -436,15 +453,6 @@ def transitions(
                     return f"unexpected token: {token}" 
                 case Keyword(value=")"):
                     return f"unexpected token: {token}" 
-                case Keyword(value="("):
-                    res = (
-                        ENode(),
-                        EOFNode(),
-                    )
-
-                    current.value = res
-                    current.pos = token.start
-                    return list(res)
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
         case NumberNode():
@@ -459,15 +467,9 @@ def transitions(
             current.value = token
             current.pos = token.start
             return None
-        case KeywordPlusNode():
-            if type(token) != Keyword or token.value != "+":
-                return f"expected +, {token} found" 
-            current.value = token
-            current.pos = token.start
-            return None
-        case KeywordLeftParenNode():
-            if type(token) != Keyword or token.value != "(":
-                return f"expected (, {token} found" 
+        case KeywordRightParenNode():
+            if type(token) != Keyword or token.value != ")":
+                return f"expected ), {token} found" 
             current.value = token
             current.pos = token.start
             return None
@@ -477,9 +479,15 @@ def transitions(
             current.value = token
             current.pos = token.start
             return None
-        case KeywordRightParenNode():
-            if type(token) != Keyword or token.value != ")":
-                return f"expected ), {token} found" 
+        case KeywordLeftParenNode():
+            if type(token) != Keyword or token.value != "(":
+                return f"expected (, {token} found" 
+            current.value = token
+            current.pos = token.start
+            return None
+        case KeywordPlusNode():
+            if type(token) != Keyword or token.value != "+":
+                return f"expected +, {token} found" 
             current.value = token
             current.pos = token.start
             return None

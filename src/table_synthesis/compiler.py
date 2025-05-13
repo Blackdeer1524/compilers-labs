@@ -174,15 +174,16 @@ class {}(IASTNode):
             case None:
                 epsilon_name = f"𝓔{id(self)}"
                 res += f'\\t{epsilon_name} [label="𝓔"]\\n'
-                res += f"{self.node_name} -> {epsilon_name}"
+                res += f"\\t{self.node_name} -> {epsilon_name}\\n"
             case tuple():
                 res += "".join(child.to_graphviz() for child in self.value)
                 res += "".join(
                     f"\\t{self.node_name} -> {child.node_name}\\n" for child in self.value
                 )
-                res += "\\t{{rank=same; {} [style=invis]}}\\n".format(
-                    " -> ".join(child.node_name for child in self.value)
-                )
+                if len(self.value) > 1:
+                    res += "\\t{{rank=same; {} [style=invis]}}\\n".format(
+                        " -> ".join(child.node_name for child in self.value)
+                    )
         return res
 """
     )

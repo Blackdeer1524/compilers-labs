@@ -1,10 +1,5 @@
 `python parser.py < test.txt | xclip -selection clipboard`
 
-
-
-
-
-
 |   |)|#EOF|#Number|*|+|(|
 |---|---|---|---|---|---|---|
 |F|---|---|#Number|---|---|( E )|
@@ -13,9 +8,6 @@
 |E|---|---|T E1|---|---|T E1|
 |E1|𝓔|𝓔|---|---|+ T E1|---|
 |Init|---|---|E #EOF|---|---|E #EOF|
-
-
-
 
 
 |   |n|+|(|*|)|#EOF|
