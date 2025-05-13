@@ -15,7 +15,7 @@ EOF_DIRECTIVE = f"{DIRECTIVE_PREFIX}EOF"
 
 LL1_TABLE_T = dict[str, DefaultDict[str, RULE_TAIL_T | None]]
 
-INIT_NODE_NAME = "#Init"
+INIT_NODE_NAME = "Init"
 
 
 def render_table(table: LL1_TABLE_T) -> str:
@@ -213,7 +213,10 @@ class Synthesizer:
             raise SyntaxError(f"found non-terminals without productions: {errors}")
 
     def setup_table_keys(self):
-        for info in self.productions.values():
+        symbols: set[str] = set()
+        for nonterm, info in self.productions.items():
+            self.table[nonterm] = defaultdict(lambda: None) 
+ 
             for rule in info.rhs:
                 match rule:
                     case "epsilon":
@@ -222,9 +225,15 @@ class Synthesizer:
                         for term in rule:
                             match term:
                                 case QuotedStr(value=value):
-                                    self.table[self.axiom][value] = None
+                                    symbols.add(value)
                                 case Ident():
                                     continue
+        
+        for key in self.table:
+            for symbol in symbols:
+                if self.table[key].get(symbol) is None:
+                    self.table[key][symbol] = None
+                    
 
     def process(
         self, axiom: str, productions: dict[str, ProductionInfo]
@@ -238,7 +247,6 @@ class Synthesizer:
                 f"axiom {axiom} not found in productions: {self.productions.keys()}"
             )
         self.ensure_nonterms_are_valid()
-        self.setup_table_keys()
 
         DUMMY_POS = Position(-1, -1)
         self.productions[INIT_NODE_NAME] = ProductionInfo(
@@ -250,6 +258,7 @@ class Synthesizer:
                 ]
             ],
         )
+        self.setup_table_keys()
 
         for nonterm in productions:
             self.calculate_first_sets(nonterm)
