@@ -1,4 +1,5 @@
 from pprint import pprint
+import sys
 from src.scanning.scanner import Scanner
 from src.analysis.analyzer import SyntacticAnalyzer
 from src.table_synthesis.semantics import SemanticsAnalyzer
@@ -8,7 +9,7 @@ from src.table_synthesis.stream import Stream
 
 
 def main():
-    scanner = Scanner(open("./input.txt"))
+    scanner = Scanner(open(sys.argv[1]))
     syn_an = SyntacticAnalyzer(scanner)
 
     res = syn_an.parse()

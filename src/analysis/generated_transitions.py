@@ -1,14 +1,14 @@
-# ========================================
-# |   |#EOF|(|*|#Number|+|)|
+# ====================
+# |   |(|*|#EOF|)|#Number|+|
 # |---|---|---|---|---|---|---|
-# |F|---|( E )|---|#Number|---|---|
-# |T|---|F T1|---|F T1|---|---|
-# |T1|𝓔|---|* F T1|---|𝓔|𝓔|
-# |E|---|T E1|---|T E1|---|---|
-# |E1|𝓔|---|---|---|+ T E1|𝓔|
-# |Init|---|E #EOF|---|E #EOF|---|---|
+# |F|( E )|---|---|---|#Number|---|
+# |T|F T1|---|---|---|F T1|---|
+# |T1|---|* F T1|𝓔|𝓔|---|𝓔|
+# |E|T E1|---|---|---|T E1|---|
+# |E1|---|---|𝓔|𝓔|---|+ T E1|
+# |Init|E #EOF|---|---|---|E #EOF|---|
 # 
-# ========================================
+# ====================
 from typing import Optional
 from dataclasses import dataclass, field
 
@@ -22,7 +22,7 @@ from src.scanning.custom_scanner import Token
 from src.scanning.custom_scanner import Keyword
 
 # Token types:
-from src.scanning.custom_scanner import Number, EOF
+from src.scanning.custom_scanner import EOF, Number
 
 @dataclass
 class IASTNode(IGraphVizible):
@@ -169,8 +169,8 @@ class InitNode(IASTNode):
 NON_TERMINAL = FNode | TNode | T1Node | ENode | E1Node | InitNode
 # ============== TERM NODES =============
 @dataclass
-class NumberNode(IASTNode):
-    value: Optional[Number] = None
+class EOFNode(IASTNode):
+    value: Optional[EOF] = None
 
 
     def to_graphviz(self) -> str:
@@ -187,8 +187,8 @@ class NumberNode(IASTNode):
         return res
 
 @dataclass
-class EOFNode(IASTNode):
-    value: Optional[EOF] = None
+class NumberNode(IASTNode):
+    value: Optional[Number] = None
 
 
     def to_graphviz(self) -> str:
@@ -207,24 +207,6 @@ class EOFNode(IASTNode):
 # ============== KEYWORD NODES =============
 @dataclass
 class KeywordRightParenNode(IASTNode):
-
-    value: Optional["Keyword"] = None
-
-    def to_graphviz(self) -> str:
-        res = super().to_graphviz()
-        match self.value:
-            case None:
-                epsilon_name = f"𝓔{id(self)}"
-                res += f'\t{epsilon_name} [label="𝓔"]\n'
-                res += f"{self.node_name} -> {epsilon_name}"
-                return res
-            case _:
-                res += self.value.to_graphviz()
-                res += f"\t{self.node_name} -> {self.value.node_name}\n"
-        return res
-
-@dataclass
-class KeywordAsteriskNode(IASTNode):
 
     value: Optional["Keyword"] = None
 
@@ -277,15 +259,31 @@ class KeywordPlusNode(IASTNode):
                 res += f"\t{self.node_name} -> {self.value.node_name}\n"
         return res
 
-TERMINAL = NumberNode | EOFNode | KeywordRightParenNode | KeywordAsteriskNode | KeywordLeftParenNode | KeywordPlusNode
+@dataclass
+class KeywordAsteriskNode(IASTNode):
+
+    value: Optional["Keyword"] = None
+
+    def to_graphviz(self) -> str:
+        res = super().to_graphviz()
+        match self.value:
+            case None:
+                epsilon_name = f"𝓔{id(self)}"
+                res += f'\t{epsilon_name} [label="𝓔"]\n'
+                res += f"{self.node_name} -> {epsilon_name}"
+                return res
+            case _:
+                res += self.value.to_graphviz()
+                res += f"\t{self.node_name} -> {self.value.node_name}\n"
+        return res
+
+TERMINAL = EOFNode | NumberNode | KeywordRightParenNode | KeywordLeftParenNode | KeywordPlusNode | KeywordAsteriskNode
 def transitions(
     current: NON_TERMINAL | TERMINAL, token: Token
 ) -> list[NON_TERMINAL | TERMINAL] | str | None:
     match current:
         case FNode():
             match token:
-                case EOF():
-                    return f"unexpected token: {token}" 
                 case Keyword(value="("):
                     res = (
                         KeywordLeftParenNode(),
@@ -298,6 +296,10 @@ def transitions(
                     return list(res)
                 case Keyword(value="*"):
                     return f"unexpected token: {token}" 
+                case EOF():
+                    return f"unexpected token: {token}" 
+                case Keyword(value=")"):
+                    return f"unexpected token: {token}" 
                 case Number():
                     res = (
                         NumberNode(),
@@ -308,14 +310,10 @@ def transitions(
                     return list(res)
                 case Keyword(value="+"):
                     return f"unexpected token: {token}" 
-                case Keyword(value=")"):
-                    return f"unexpected token: {token}" 
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
         case TNode():
             match token:
-                case EOF():
-                    return f"unexpected token: {token}" 
                 case Keyword(value="("):
                     res = (
                         FNode(),
@@ -327,6 +325,10 @@ def transitions(
                     return list(res)
                 case Keyword(value="*"):
                     return f"unexpected token: {token}" 
+                case EOF():
+                    return f"unexpected token: {token}" 
+                case Keyword(value=")"):
+                    return f"unexpected token: {token}" 
                 case Number():
                     res = (
                         FNode(),
@@ -338,15 +340,10 @@ def transitions(
                     return list(res)
                 case Keyword(value="+"):
                     return f"unexpected token: {token}" 
-                case Keyword(value=")"):
-                    return f"unexpected token: {token}" 
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
         case T1Node():
             match token:
-                case EOF():
-                    current.pos = token.start
-                    return []
                 case Keyword(value="("):
                     return f"unexpected token: {token}" 
                 case Keyword(value="*"):
@@ -359,20 +356,21 @@ def transitions(
                     current.value = res
                     current.pos = token.start
                     return list(res)
-                case Number():
-                    return f"unexpected token: {token}" 
-                case Keyword(value="+"):
+                case EOF():
                     current.pos = token.start
                     return []
                 case Keyword(value=")"):
+                    current.pos = token.start
+                    return []
+                case Number():
+                    return f"unexpected token: {token}" 
+                case Keyword(value="+"):
                     current.pos = token.start
                     return []
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
         case ENode():
             match token:
-                case EOF():
-                    return f"unexpected token: {token}" 
                 case Keyword(value="("):
                     res = (
                         TNode(),
@@ -383,6 +381,10 @@ def transitions(
                     current.pos = token.start
                     return list(res)
                 case Keyword(value="*"):
+                    return f"unexpected token: {token}" 
+                case EOF():
+                    return f"unexpected token: {token}" 
+                case Keyword(value=")"):
                     return f"unexpected token: {token}" 
                 case Number():
                     res = (
@@ -395,19 +397,20 @@ def transitions(
                     return list(res)
                 case Keyword(value="+"):
                     return f"unexpected token: {token}" 
-                case Keyword(value=")"):
-                    return f"unexpected token: {token}" 
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
         case E1Node():
             match token:
-                case EOF():
-                    current.pos = token.start
-                    return []
                 case Keyword(value="("):
                     return f"unexpected token: {token}" 
                 case Keyword(value="*"):
                     return f"unexpected token: {token}" 
+                case EOF():
+                    current.pos = token.start
+                    return []
+                case Keyword(value=")"):
+                    current.pos = token.start
+                    return []
                 case Number():
                     return f"unexpected token: {token}" 
                 case Keyword(value="+"):
@@ -420,15 +423,10 @@ def transitions(
                     current.value = res
                     current.pos = token.start
                     return list(res)
-                case Keyword(value=")"):
-                    current.pos = token.start
-                    return []
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
         case InitNode():
             match token:
-                case EOF():
-                    return f"unexpected token: {token}" 
                 case Keyword(value="("):
                     res = (
                         ENode(),
@@ -439,6 +437,10 @@ def transitions(
                     current.pos = token.start
                     return list(res)
                 case Keyword(value="*"):
+                    return f"unexpected token: {token}" 
+                case EOF():
+                    return f"unexpected token: {token}" 
+                case Keyword(value=")"):
                     return f"unexpected token: {token}" 
                 case Number():
                     res = (
@@ -451,31 +453,23 @@ def transitions(
                     return list(res)
                 case Keyword(value="+"):
                     return f"unexpected token: {token}" 
-                case Keyword(value=")"):
-                    return f"unexpected token: {token}" 
                 case Keyword(value=unexpected):
                     return f"unknown keyword: {unexpected}" 
-        case NumberNode():
-            if type(token) != Number:
-                return f"expected Number, but {type(token)} found" 
-            current.value = token
-            current.pos = token.start
-            return None
         case EOFNode():
             if type(token) != EOF:
                 return f"expected EOF, but {type(token)} found" 
             current.value = token
             current.pos = token.start
             return None
-        case KeywordRightParenNode():
-            if type(token) != Keyword or token.value != ")":
-                return f"expected ), {token} found" 
+        case NumberNode():
+            if type(token) != Number:
+                return f"expected Number, but {type(token)} found" 
             current.value = token
             current.pos = token.start
             return None
-        case KeywordAsteriskNode():
-            if type(token) != Keyword or token.value != "*":
-                return f"expected *, {token} found" 
+        case KeywordRightParenNode():
+            if type(token) != Keyword or token.value != ")":
+                return f"expected ), {token} found" 
             current.value = token
             current.pos = token.start
             return None
@@ -488,6 +482,12 @@ def transitions(
         case KeywordPlusNode():
             if type(token) != Keyword or token.value != "+":
                 return f"expected +, {token} found" 
+            current.value = token
+            current.pos = token.start
+            return None
+        case KeywordAsteriskNode():
+            if type(token) != Keyword or token.value != "*":
+                return f"expected *, {token} found" 
             current.value = token
             current.pos = token.start
             return None

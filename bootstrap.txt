@@ -16,6 +16,6 @@ RuleAlt     `is "`or" Rule RuleAlt
 Axiom       `is "`axiom"
             `or `epsilon `end
 
-NonTerm `is "#IDENT" `end
+NonTerm `is "#Ident" `end
 
-Term    `is "#QStr" `end
+Term    `is "#QuotedStr" `end
