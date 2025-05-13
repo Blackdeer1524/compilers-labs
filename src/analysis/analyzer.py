@@ -1,7 +1,7 @@
 from collections import deque
 from typing import Deque
 
-from src.analysis.transitions import NON_TERMINAL, TERMINAL, InitNode, transitions
+from src.analysis.bootstrapped_transitions import NON_TERMINAL, TERMINAL, InitNode, transitions
 from src.scanning.scanner import ScanError, Scanner
 
 

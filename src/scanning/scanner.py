@@ -110,7 +110,7 @@ class Scanner:
                 start_p = self._text.position()
                 errored = False
                 self._text.advance()
-                value = ""
+                value = "`"
                 while True:
                     cur = self._text.peek()
                     if cur is None or cur.isspace():

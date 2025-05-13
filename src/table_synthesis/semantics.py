@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal, Optional
 from src.scanning.scanner import Ident, QuotedStr
-from src.analysis.transitions import *
+from src.analysis.bootstrapped_transitions import *
 from src.text.processors import Position
 
 RULE_TAIL_T = list[Ident | QuotedStr]
@@ -30,13 +30,13 @@ class SemanticsAnalyzer:
         if node.value is None:
             self.store_error(f"expected {node.node_label} not to be None", node.pos)
             return None
-        return node.value
+        return node.value[0].value
 
     def collect_term(self, node: TermNode) -> Optional[QuotedStr]:
         if node.value is None:
             self.store_error(f"expected {node.node_label} not to be None", node.pos)
             return None
-        return node.value
+        return node.value[0].value
 
     def collect_rule_tail(self, node: RuleTailNode) -> RULE_TAIL_T:
         match node.value:
@@ -68,7 +68,7 @@ class SemanticsAnalyzer:
                 if non_term is None:
                     return self.collect_rule_tail(tail)
                 return [non_term] + self.collect_rule_tail(tail)
-            case KeywordEpsilonNode():
+            case (KeywordBacktickepsilonNode(), ):
                 return "epsilon"
 
     def collect_alt_rules(self, node: RuleAltNode) -> list[RULE_T]:
@@ -76,7 +76,7 @@ class SemanticsAnalyzer:
             case None:
                 return []
             case (
-                KeywordOrNode() as kw_or,
+                KeywordBacktickorNode() as kw_or,
                 RuleNode() as rule,
                 RuleAltNode() as alt_rules,
             ):
