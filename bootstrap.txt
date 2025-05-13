@@ -1,13 +1,12 @@
 `axiom Production   `is Axiom NonTerm "`is" Rule RuleAlt "`end" Production 
                     `or `epsilon `end
 
-Rule        `is RuleItem RuleTail 
+Rule        `is Term RuleTail 
+            `or NonTerm RuleTail 
             `or "`epsilon" `end
 
-RuleItem    `is NonTerm 
-            `or Term `end
-
-RuleTail    `is RuleItem RuleTail 
+RuleTail    `is Term RuleTail 
+            `or NonTerm RuleTail 
             `or `epsilon `end
 
 RuleAlt     `is "`or" Rule RuleAlt

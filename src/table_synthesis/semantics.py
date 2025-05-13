@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal, Optional
 from src.scanning.scanner import Ident, QuotedStr
-from src.analysis.ast import *
+from src.analysis.transitions import *
 from src.text.processors import Position
 
 RULE_TAIL_T = list[Ident | QuotedStr]

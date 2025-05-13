@@ -1,13 +1,13 @@
 `python parser.py < test.txt | xclip -selection clipboard`
 
-|   |#EOF|#QuotedStr|`end|`or|`is|#Ident|`epsilon|`axiom|
+|   |#Ident|`is|`axiom|`end|#QuotedStr|`epsilon|#EOF|`or|
 |---|---|---|---|---|---|---|---|---|
-|Production|𝓔|---|---|---|---|Axiom NonTerm `is Rule RuleAlt `end Production|---|Axiom NonTerm `is Rule RuleAlt `end Production|
-|Rule|---|RuleItem RuleTail|---|---|---|RuleItem RuleTail|`epsilon|---|
-|RuleItem|---|Term|---|---|---|NonTerm|---|---|
-|RuleTail|---|RuleItem RuleTail|𝓔|𝓔|---|RuleItem RuleTail|---|---|
-|RuleAlt|---|---|𝓔|`or Rule RuleAlt|---|---|---|---|
-|Axiom|---|---|---|---|---|𝓔|---|`axiom|
-|NonTerm|---|---|---|---|---|#Ident|---|---|
-|Term|---|#QuotedStr|---|---|---|---|---|---|
-|Init|Production #EOF|---|---|---|---|Production #EOF|---|Production #EOF|
+|Production|Axiom NonTerm `is Rule RuleAlt `end Production|---|Axiom NonTerm `is Rule RuleAlt `end Production|---|---|---|𝓔|---|
+|Rule|RuleItem RuleTail|---|---|---|RuleItem RuleTail|`epsilon|---|---|
+|RuleItem|NonTerm|---|---|---|Term|---|---|---|
+|RuleTail|NonTerm RuleTail|---|---|𝓔|Term RuleTail|---|---|𝓔|
+|RuleAlt|---|---|---|𝓔|---|---|---|`or Rule RuleAlt|
+|Axiom|𝓔|---|`axiom|---|---|---|---|---|
+|NonTerm|#Ident|---|---|---|---|---|---|---|
+|Term|---|---|---|---|#QuotedStr|---|---|---|
+|Init|Production #EOF|---|Production #EOF|---|---|---|Production #EOF|---|
