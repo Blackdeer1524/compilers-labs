@@ -13,13 +13,13 @@ from typing import Optional
 from dataclasses import dataclass, field
 
 from src.common.abc import IGraphVizible
-from src.scanning.scanner import wrap
+from src.common.pretty import wrap
 from src.text.processors import Position
 
-from src.scanning.scanner import Token
+from src.scanning.custom_scanner import Token
 
 # every scanner has to provide
-from src.scanning.scanner import Keyword
+from src.scanning.custom_scanner import Keyword
 
 # Token types:
 {}
@@ -86,7 +86,7 @@ def generate_imports(ss: Stream, token_types: set[str]):
 
     ss.push_line(
         IMPORT_SECTION.format(
-            "from src.scanning.scanner import {}".format(", ".join(token_types))
+            "from src.scanning.custom_scanner import {}".format(", ".join(token_types))
         )
     )
 
@@ -347,6 +347,7 @@ def generate_transitions(
 
         ss.push_line("current.value = token")
         ss.push_line("current.pos = token.start")
+        ss.push_line("return None")
         ss.adjust_indent_level(-1)
 
     for keyword in keywords:

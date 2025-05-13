@@ -5,28 +5,7 @@ from src.text.processors import Segment, Position, TextWithPosition
 from src.common.abc import IGraphVizible
 from src.common.pretty import wrap
 
-
 # ==============================================
-
-
-@dataclass(frozen=True)
-class QuotedStr(Segment, IGraphVizible):
-    value: str
-
-    def to_graphviz(self) -> str:
-        return '\t{} [label="{}"]\n'.format(
-            self.node_name, wrap(str(self)).replace('"', "'")
-        )
-
-
-@dataclass(frozen=True)
-class Ident(Segment, IGraphVizible):
-    value: str
-
-    def to_graphviz(self) -> str:
-        return '\t{} [label="{}"]\n'.format(
-            self.node_name, wrap(str(self)).replace('"', "'")
-        )
 
 
 @dataclass(frozen=True)
@@ -48,7 +27,9 @@ class EOF(Segment, IGraphVizible):
 
 
 @dataclass(frozen=True)
-class NUMBER(Segment, IGraphVizible):
+class Number(Segment, IGraphVizible):
+    value: int
+
     def to_graphviz(self) -> str:
         return '\t{} [label="{}"]\n'.format(
             self.node_name, wrap(str(self)).replace('"', "'")
@@ -61,7 +42,7 @@ class ScanError:
     pos: Position
 
 
-Token = QuotedStr | Ident | Keyword | EOF
+Token = Number  | Keyword | EOF
 
 
 class Scanner:
@@ -106,77 +87,31 @@ class Scanner:
             if cur is None:
                 yield EOF(start=self._text.position(), end=self._text.position())
                 return
-            elif cur == "`":
-                start_p = self._text.position()
+            if cur == "+":
                 errored = False
-                self._text.advance()
-                value = ""
-                while True:
-                    cur = self._text.peek()
-                    if cur is None or cur.isspace():
-                        break
-                    value += cur
-                    self._text.advance()
-                end_p = self._text.position()
-                yield Keyword(
-                    value,
-                    start=start_p,
-                    end=end_p,
-                )
-            elif cur == '"':
                 start_p = self._text.position()
-                value = ""
                 self._text.advance()
-                allow_special = False
-                while True:
-                    cur = self._text.peek()
-                    if cur is None or cur == "\n":
-                        break
-
-                    if allow_special:
-                        if cur == '"':
-                            value += '"'
-                        elif cur == "\\":
-                            value += "\\"
-                        else:
-                            value += f"\\{cur}"
-                            yield ScanError(
-                                f"unknown special symbol: \\{cur}",
-                                self._text.position(),
-                            )
-                        allow_special = False
-                    else:
-                        if cur == '"':
-                            break
-
-                        if cur == "\\":
-                            allow_special = True
-                        else:
-                            value += cur
-
-                    self._text.advance()
-                if cur is None or cur == "\n":
-                    yield ScanError(
-                        'expected a closing quote (")', self._text.position()
-                    )
-                    continue
                 end_p = self._text.position()
-                self._text.advance()
-                yield QuotedStr(value, start=start_p, end=end_p)
+                yield Keyword("+", start=start_p, end=end_p)
+            elif cur == "*":
                 errored = False
-                continue
-            elif cur.isalpha():
                 start_p = self._text.position()
-                value = cur
                 self._text.advance()
-                while True:
-                    cur = self._text.peek()
-                    if cur is None or (not cur.isalnum() and cur not in ("_", "'")):
-                        break
-                    value += cur
-                    self._text.advance()
                 end_p = self._text.position()
-                yield Ident(value, start=start_p, end=end_p)
+                yield Keyword("-", start=start_p, end=end_p)
+            elif cur.isdigit():
+                errored = False
+                start_p = self._text.position()
+                val = 0
+                while True:
+                    val += int(cur)
+                    self._text.advance()
+                    cur = self._text.peek()
+                    if cur is None or not cur.isdigit():
+                        break
+                
+                end_p = self._text.position()
+                yield Number(val, start=start_p, end=end_p)
             else:
                 if errored:
                     self._text.advance()

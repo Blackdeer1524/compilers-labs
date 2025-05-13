@@ -8,7 +8,7 @@ from src.table_synthesis.stream import Stream
 
 
 def main():
-    scanner = Scanner(open("./test.txt"))
+    scanner = Scanner(open("./input.txt"))
     syn_an = SyntacticAnalyzer(scanner)
 
     res = syn_an.parse()
@@ -21,11 +21,13 @@ def main():
         case tuple((axiom, infos)):
             synth = Synthesizer()
             table = synth.process(axiom, infos)
-            # print(render_table(table))
-            # 
-            # print("# ====================")
+            rendered_table = render_table(table)
 
             s = Stream()
+            s.push_line("# ====================")
+            s.push_line("\n".join(map(lambda item: "# " + item, rendered_table.split(sep="\n"))))
+            s.push_line("# ====================")
+
             generate_transitions(s, table, infos)
             print(s.emit())
         case list() as errors:

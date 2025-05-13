@@ -1,4 +1,4 @@
-F  `is "#NUMBER" `or "(" E ")" `end
+F  `is "#Number" `or "(" E ")" `end
 T  `is F T1 `end
 T1 `is "*" F T1 `or `epsilon `end
 `axiom E  `is T E1 `end
