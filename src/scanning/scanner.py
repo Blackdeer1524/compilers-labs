@@ -83,6 +83,12 @@ class EOF(Segment, IGraphVizible):
             self.node_name, wrap(str(self)).replace('"', "'")
         )
 
+@dataclass(frozen=True)
+class NUMBER(Segment, IGraphVizible):
+    def to_graphviz(self) -> str:
+        return '\t{} [label="{}"]\n'.format(
+            self.node_name, wrap(str(self)).replace('"', "'")
+        )
 
 @dataclass(frozen=True)
 class ScanError:

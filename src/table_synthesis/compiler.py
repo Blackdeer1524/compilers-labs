@@ -9,7 +9,7 @@ from src.table_synthesis.semantics import ProductionInfo
 from src.table_synthesis.stream import Stream
 
 IMPORT_SECTION = """\
-from typing import Optional, Union
+from typing import Optional
 from dataclasses import dataclass, field
 
 from src.common.abc import IGraphVizible
@@ -18,11 +18,10 @@ from src.text.processors import Position
 
 from src.scanning.scanner import Token
 
-# every scanner has to provide them
-from src.scanning.scanner import Keyword, EOF
+# every scanner has to provide
+from src.scanning.scanner import Keyword
 
-# specific to a language
-# from src.scanning.scanner import Ident, QuotedStr
+# Token types:
 {}
 """
 
