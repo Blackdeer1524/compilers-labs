@@ -1,13 +1,11 @@
 (<int> [Main (<<int>> !A) (<int> !B)])
-   (int @a) := 'i like books',
+   (int @a) := 'i like books' %123%,
    @a := <<!A 1> 2>,
    ^ #C,
 %%
 
 (<int>
-[SumVectors
-(int !A)(char !B)(int !B)
-]
+[SumVectors]
 )
 (int #C) := new_ <int> #size,
     #x := #a*2 + 10, #x := #a*(2 + 10),

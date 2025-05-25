@@ -158,6 +158,7 @@ new_ return KW_NEW;
 
 \{.*\}  {
             // yylval->str = strdup(yytext);
+            printf("%s", yytext);
             // return STRING;
         }
 

@@ -34,8 +34,7 @@
 %token FUNC_END BLOCK_END KW_ELSE LEFT_ANGLE RIGHT_ANGLE LEFT_PAREN RIGHT_PAREN LEFT_BRACE RIGHT_BRACE
 %token COMMA COLON QUESTION ASSERT RETURN COMMENT AMPERSAND
 
-%token SYMBOL 
-
+%token <str> SYMBOL 
 %token <str> TYPE
 %token <str> NAME
 %token <str> IDENT
@@ -64,7 +63,7 @@ VAR_DECL :
     ;
 
 FUNC_HEADER :
-    LEFT_PAREN {printf("(");} TYPE_DECL 
+    LEFT_PAREN {printf("(");} TYPE_DECL {printf(" ");} 
         LEFT_BRACE {printf("[");} 
             NAME[N] {printf("%s", $N);} FUNC_PARAMS 
         RIGHT_BRACE {printf("]");} 
@@ -73,12 +72,12 @@ FUNC_HEADER :
     ;
 
     FUNC_PARAMS:
-        VAR_DECL FUNC_PARAMS
+        {printf(" ");} VAR_DECL FUNC_PARAMS
         | 
         ;
 
 TYPE_DECL: 
-    LEFT_ANGLE {printf("<"); } TYPE_DECL RIGHT_ANGLE {printf("> ");}
+    LEFT_ANGLE {printf("<"); } TYPE_DECL RIGHT_ANGLE {printf(">");}
     | TYPE[T] {printf("%s", $T);}
     ;
 
@@ -86,49 +85,50 @@ FUNC_BODY :
     STATEMENTS FUNC_END {printf("%%%%");}
 
 ARRAY_INDEXING :
-    LEFT_ANGLE {printf("<");} EXPRESSION {printf(" ");}EXPRESSION RIGHT_ANGLE {printf(">");}
+    LEFT_ANGLE {printf("<");} EXPRESSION {printf(" ");} EXPRESSION RIGHT_ANGLE {printf(">");}
     ;
 
 STATEMENTS: 
     STATEMENT STATEMENTS
     |
     ;
-        STATEMENT:
-            VAR_DECL         OPTIONAL_ASSIGNMENT COMMA {printf(", ");} 
-            | IDENT[N] {printf("%s", $N);} ASSIGNMENT COMMA {printf(", ");} 
-            | ARRAY_INDEXING ASSIGNMENT COMMA {printf(", ");} 
-            | ASSERT {printf("\\ ");} LOGIC COMMA {printf(", ");} 
-            | RETURN {printf("^ ");} EXPRESSION COMMA {printf(", ");} 
-            | RETURN {printf("^ ");} COMMA {printf(", ");} 
-            | IF 
-            | LOOP 
+
+    STATEMENT:
+        VAR_DECL OPTIONAL_ASSIGNMENT COMMA {printf(", ");} 
+        | IDENT[N] {printf("%s", $N);} ASSIGNMENT COMMA {printf(", ");} 
+        | ARRAY_INDEXING ASSIGNMENT COMMA {printf(", ");} 
+        | ASSERT {printf("\\ ");} LOGIC COMMA {printf(", ");} 
+        | RETURN {printf("^ ");} EXPRESSION COMMA {printf(", ");} 
+        | RETURN {printf("^ ");} COMMA {printf(", ");} 
+        | IF 
+        | LOOP 
+        ;
+        
+        ASSIGNMENT : 
+            KW_ASSIGN {printf(" := ");} ASSIGNMENT_RHS 
             ;
-            
 
-            ASSIGNMENT : 
-                KW_ASSIGN {printf(" := ");} ASSIGNMENT_RHS 
-                ;
-
-                ASSIGNMENT_RHS:
+            ASSIGNMENT_RHS:
+                EXPRESSION 
+                |   KW_NEW {printf("new_");} 
+                        LEFT_ANGLE {printf("<");} 
+                            TYPE_DECL 
+                        RIGHT_ANGLE {printf(">");} 
                     EXPRESSION 
-                    |   KW_NEW {printf("new_");} 
-                            LEFT_ANGLE {printf("<");} 
-                                TYPE_DECL 
-                            RIGHT_ANGLE {printf(">");} 
-                        EXPRESSION 
-                    | STRINGS_BLOCK 
+                | STRINGS_BLOCK 
+                | SYMBOL[S] {printf("%s", $S);}
+                ;
+                
+                STRINGS_BLOCK :
+                    | STRING[S] {printf("%s", $S);} STRINGS_BLOCK
+                    | STR_SYMBOL[S] {printf("%s", $S);} STRINGS_BLOCK
+                    |
                     ;
 
-            OPTIONAL_ASSIGNMENT :
-                ASSIGNMENT
-                | 
-                ;  
-
-    STRINGS_BLOCK :
-        | STRING[S] {printf("%s", $S);} STRINGS_BLOCK
-        | STR_SYMBOL[S] {printf("%s", $S);} STRINGS_BLOCK
-        |
-        ;
+        OPTIONAL_ASSIGNMENT :
+            ASSIGNMENT
+            | 
+            ;  
 
 
 EXPRESSION :
@@ -154,7 +154,8 @@ FUNC_CALL :
 
     ARGS : 
         {printf(" ");} EXPRESSION ARGS
-        |
+        | {printf(" ");} SYMBOL[N] {printf("%s", $N);} ARGS
+        | 
         ;
 
 LOGIC :
@@ -178,12 +179,12 @@ IF:
         ;
     
     COMPARISON :
-        EXPRESSION KW_LT {  printf(" _lt_ ");}EXPRESSION
-        | EXPRESSION KW_LE {printf(" _le_ ");}EXPRESSION
-        | EXPRESSION KW_GT {printf(" _gt_ ");}EXPRESSION
-        | EXPRESSION KW_GE {printf(" _ge_ ");}EXPRESSION
-        | EXPRESSION KW_EQ {printf(" _eq_ ");}EXPRESSION
-        | EXPRESSION KW_NE {printf(" _ne_ ");}EXPRESSION
+        EXPRESSION KW_LT {  printf(" _lt_ ");} EXPRESSION
+        | EXPRESSION KW_LE {printf(" _le_ ");} EXPRESSION
+        | EXPRESSION KW_GT {printf(" _gt_ ");} EXPRESSION
+        | EXPRESSION KW_GE {printf(" _ge_ ");} EXPRESSION
+        | EXPRESSION KW_EQ {printf(" _eq_ ");} EXPRESSION
+        | EXPRESSION KW_NE {printf(" _ne_ ");} EXPRESSION
         ;
 
 LOOP : 
@@ -226,13 +227,6 @@ int main(int argc, char *argv[]) {
     // }
 
     init_scanner(input, &scanner, &extra);
-
-    // int tag;
-    // YYSTYPE value;
-    // YYLTYPE coords;
-    // 
-    // tag = yylex(&value, &coords, &scanner);
-
     yyparse(scanner);
     destroy_scanner(scanner);
 
