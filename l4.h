@@ -15,6 +15,9 @@ struct Extra {
     int cur_column;
 };
 
+static int a = 1 + 1 * 1 + 1 * 1 + 1 * 1 + 1 * 1 + 1 * 1 + 1 * 1 +
+               1 * 1 * 1 * 1 + 1 * 1 + 1 * 1 + 1 * 1 + 1 * 1 + 1 * 1 + 1 * 1;
+
 void init_scanner(FILE *input, yyscan_t *scanner, struct Extra *extra);
 void destroy_scanner(yyscan_t);
 

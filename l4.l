@@ -49,11 +49,11 @@ IDENT {IDENT_PREF}({LETTER}|{DIGIT})+
 
 %%
 
-\r\n {printf("\n");}
-\r {printf("\n");}
-\n {printf("\n");}
+\r\n {/*printf("\n"); return NEW_LINE;*/}
+\r   {/*printf("\n"); return NEW_LINE;*/}
+\n   {/*printf("\n"); return NEW_LINE;*/}
 
-[\r\t ]+
+[\t ]+
 
 := return KW_ASSIGN;
 \+\+\+ return KW_ELSE;
