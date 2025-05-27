@@ -303,7 +303,7 @@ class Parser:
 
     def parse_func_decl(self) -> FuncDefinition:
         """
-        "Func" ::= "fun" "(" (IDENT)+ ")" "->" IDENT ":" clause ("|" clause)* "."
+        Func ::= "fun" "(" (IDENT)+ ")" "->" IDENT ":" clause ("|" clause)* "."
         """
 
         self.consume("FUN")
