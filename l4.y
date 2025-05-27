@@ -1,5 +1,6 @@
 %{
 #include <stdio.h>
+#include <string.h>
 #include "l4.h"
 
 #define LINE_LIMIT 40
@@ -53,7 +54,8 @@ int limited_print(
 %left PLUS MINUS 
 %left MULT DIV
 
-%left KW_AND KW_OR KW_XOR
+%left KW_OR KW_XOR
+%left KW_AND 
 %left KW_MOD
 %right UMINUS KW_NOT KW_POW
 
@@ -172,7 +174,7 @@ STATEMENTS:
                 ;
                 
                 STRINGS_BLOCK :
-                    | STRING[S] {line_len = limited_print($S, line_len, indent_level);}  STRINGS_BLOCK
+                    | STRING[S]     {line_len = limited_print($S, line_len, indent_level);}  STRINGS_BLOCK
                     | STR_SYMBOL[S] {line_len = limited_print($S, line_len, indent_level);}  STRINGS_BLOCK
                     |
                     ;
@@ -215,14 +217,16 @@ FUNC_CALL :
         ;
 
 LOGIC :
-      LOGIC  KW_OR  {line_len = limited_print(" _or_ ", line_len, indent_level);}   LOGIC
-    | LOGIC  KW_AND {line_len = limited_print(" _and_ ", line_len, indent_level);}  LOGIC
-    | KW_NOT       {line_len = limited_print(" _not_ ", line_len, indent_level);} LOGIC
-    | LEFT_PAREN   {line_len = limited_print("(", line_len, indent_level);} LOGIC RIGHT_PAREN {line_len = limited_print(")", line_len, indent_level);}
-    | COMPARISON
+      LOGIC  KW_OR  {line_len = limited_print(" _or_ ", line_len, indent_level);}  LOGIC
+    | LOGIC  KW_AND {line_len = limited_print(" _and_ ", line_len, indent_level);} LOGIC
+    | KW_NOT       {line_len = limited_print(" _not_ ", line_len, indent_level);}  LOGIC
+    | LEFT_PAREN   {line_len = limited_print("(", line_len, indent_level);} 
+        LOGIC 
+      RIGHT_PAREN {line_len = limited_print(")", line_len, indent_level);}
     | LIT_TRUE {line_len = limited_print("true", line_len, indent_level);}
     | LIT_FALSE {line_len = limited_print("false", line_len, indent_level);}
     | IDENT[N] {line_len = limited_print($N, line_len, indent_level);}
+    | COMPARISON
     ;
 
 IF: 
@@ -279,7 +283,7 @@ LOOP :
         ;
 
         LOOP_PREFIX: 
-            LEFT_PAREN {line_len = limited_print("(", line_len, indent_level);} AMPERSAND {line_len = limited_print("&", line_len, indent_level);}
+            LEFT_PAREN {line_len = limited_print("(", line_len, indent_level);} AMPERSAND {line_len = limited_print("& ", line_len, indent_level);}
             ;
 
 %%
