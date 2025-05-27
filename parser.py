@@ -232,7 +232,7 @@ class Parser:
         self.advance()
         return t
 
-    def parse_program(self) -> Program:
+    def parse_program(self) -> tuple[Program, list[str]]:
         """
         axiom
         Program ::= (ADT | Func)* EOF
@@ -252,7 +252,7 @@ class Parser:
                         func = self.parse_func_decl()
                         p.functions.append(func)
                     case "EOF":
-                        return p
+                        break
                     case _:
                         self.report(
                             f"unexpected token type: {t.type}. token: {t}",
@@ -262,12 +262,17 @@ class Parser:
             except ParserError:
                 self.recover()
 
+        return p, self.errors
+
     def recover(self):
         while (c := self.peek()) is not None and c.type not in ("EOF", "DOT"):
             self.advance()
 
         if c is None:
             self.report("couldn't recover: unexpected end of file", -1, -1)
+
+        if c.type == "DOT":
+            self.advance()
 
     def parse_adt(self) -> ADT:
         """
@@ -424,5 +429,6 @@ if __name__ == "__main__":
         sample = "".join(f.readlines())
 
     tokens = Lexer(sample).tokenize()
-    res = Parser(tokens).parse_program()
+    (res, errs) = Parser(tokens).parse_program()
     pprint(res)
+    pprint(errs)

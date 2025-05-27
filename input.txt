@@ -1,7 +1,7 @@
 type List: Cons Int List | Nil.
 type Pair: Pair Int Int.
 type PairList: PCons Pair PairList | PNil.
-type ListList: XCons List ListList | XNil.
+tpe ListList: XCons List ListList | XNil.
 
 fun (zip List List) -> PairList:
 
