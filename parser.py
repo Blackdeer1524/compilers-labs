@@ -243,19 +243,31 @@ class Parser:
             if t is None:
                 self.report("unexpected end of file", -1, -1)
 
-            match t.type:
-                case "TYPE":
-                    adt = self.parse_adt()
-                    p.datatypes.append(adt)
-                case "FUN":
-                    func = self.parse_func_decl()
-                    p.functions.append(func)
-                case "EOF":
-                    return p
-                case _:
-                    self.report(
-                        f"unexpected token type: {t.type}. token: {t}", t.line, t.column
-                    )
+            try:
+                match t.type:
+                    case "TYPE":
+                        adt = self.parse_adt()
+                        p.datatypes.append(adt)
+                    case "FUN":
+                        func = self.parse_func_decl()
+                        p.functions.append(func)
+                    case "EOF":
+                        return p
+                    case _:
+                        self.report(
+                            f"unexpected token type: {t.type}. token: {t}",
+                            t.line,
+                            t.column,
+                        )
+            except ParserError:
+                self.recover()
+
+    def recover(self):
+        while (c := self.peek()) is not None and c.type not in ("EOF", "DOT"):
+            self.advance()
+
+        if c is None:
+            self.report("couldn't recover: unexpected end of file", -1, -1)
 
     def parse_adt(self) -> ADT:
         """
@@ -348,7 +360,7 @@ class Parser:
         elif c.type == "NUMBER":
             self.advance()
             return int(c.value)
-            
+
         return self.consume("IDENT").value
 
     def parse_constructor_call(self) -> ConstructorCall:
