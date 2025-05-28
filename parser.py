@@ -276,7 +276,7 @@ class Parser:
 
     def parse_adt(self) -> ADT:
         """
-        ADT ::= "type" IDENT ":" (IDENT)+ ("|" IDENT)* "."
+        ADT ::= "type" IDENT ":" (IDENT)+ ("|" IDENT+)* "."
         """
         self.consume("TYPE")
         name = self.consume("IDENT").value

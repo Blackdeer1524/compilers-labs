@@ -10,12 +10,6 @@ Program(datatypes=[ADT(name='List',
                                                      arg_types=['Pair',
                                                                 'PairList']),
                                      ConstructorDecl(name='PNil',
-                                                     arg_types=[])]),
-                   ADT(name='ListList',
-                       constructors=[ConstructorDecl(name='XCons',
-                                                     arg_types=['List',
-                                                                'ListList']),
-                                     ConstructorDecl(name='XNil',
                                                      arg_types=[])])],
         functions=[FuncDefinition(name='zip',
                                   args_types=['List', 'List'],
@@ -176,3 +170,5 @@ Program(datatypes=[ADT(name='List',
                                                                                                                                                            args=[1,
                                                                                                                                                                  ConstructorCall(name='Nil',
                                                                                                                                                                                  args=[])])])])])]))])])
+["[4,1]: unexpected token type: IDENT. token: Token(type='IDENT', value='tpe', "
+ 'line=4, column=1)']
