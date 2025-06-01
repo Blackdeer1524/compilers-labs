@@ -1,3 +1,4 @@
+from collections import deque
 from dataclasses import dataclass
 from pprint import pprint
 from typing import List, Literal, Never, Optional
@@ -142,58 +143,133 @@ class ParserError(Exception):
 
 
 @dataclass
-class Program:
-    datatypes: list["ADT"]
-    functions: list["FuncDefinition"]
+class ASTNode:
+    line: int
+    col: int
 
 
 @dataclass
-class ADT:
+class Program(ASTNode):
+    datatypes: list["ADT"]
+    functions: list["FuncDefinition"]
+    
+    def check(self):
+        defined_adts: set[str] = set()
+        for f in self.datatypes:
+            if f.name in defined_adts:
+                raise NotImplementedError()
+            defined_adts.add(f.name)
+        
+        defined_functions: set[str] = set()
+        for f in self.functions:
+            if f.name in defined_functions:
+                raise NotImplementedError()
+            defined_functions.add(f.name)
+
+        defined_constructors: dict[str, "ConstructorDecl"] = {}
+        for adt in self.datatypes:
+            adt.check(defined_adts, defined_constructors)
+
+        for f in self.functions:
+            f.check(defined_functions, defined_adts, defined_constructors)
+
+
+@dataclass
+class ADT(ASTNode):
     name: str
     constructors: list["ConstructorDecl"]
 
+    def check(self, defined_adts: set[str], defined_constructors: dict[str, "ConstructorDecl"]):
+        for c in self.constructors:
+            if c.name in defined_constructors:
+                raise NotImplementedError()
+            defined_constructors[c.name] = c
+            
+            for t in c.arg_types:
+                if t not in defined_adts:
+                    raise NotImplementedError()
 
 @dataclass
-class ConstructorDecl:
+class ConstructorDecl(ASTNode):
+    type: str
     name: str
     arg_types: list[str]
 
 
 @dataclass
-class FuncDefinition:
+class FuncDefinition(ASTNode):
     name: str
     args_types: list[str]
     return_type: str
 
     clauses: list["Clause"]
+    
+    def check(self, 
+              defined_functions: dict[str, "FuncDefinition"], 
+              defined_adts: set[str], 
+              defined_constructors: dict[str, "ConstructorDecl"]): 
+        for t in self.args_types:
+            if t not in defined_adts:
+                raise NotImplementedError()
+        
+        if self.return_type not in defined_adts:
+            raise NotImplementedError()
+
+        for clause in self.clauses:
+            clause.check()
 
 
 @dataclass
-class Clause:
+class Clause(ASTNode):
     lhs_patters: "ClauseLHS"
     rhs: "Expr"
+
+    def check(self):
+
+
 
 
 @dataclass
 class ClauseLHS:
     func_name: str
-    args: list["ConstructorPattern | str"]
+    args: list["ConstructorPattern | Token"]
+    
+    def check(self, 
+              func: FuncDefinition, 
+              defined_constructors: dict[str, ConstructorDecl]):
+        if self.func_name != func.name:
+            raise NotImplementedError()
+
+        defined_idents: set[str] = set()
+        d = deque(((i, t) for i, t in zip(self.args, func.args_types)))
+        while len(d) > 0:
+            arg, expected_type = d.popleft()
+            match arg:
+                case Token() as ident:
+                    if ident.value in defined_idents:
+                        raise NotImplementedError("identifier is already defined")
+                    defined_idents.add(ident.value)
+                case ConstructorPattern(line=line, column=col, name=name, args=args):
+                    if name not in defined_constructors:
+                        raise NotImplementedError("unknown constructor")
+                    
+
 
 
 @dataclass
-class ConstructorPattern:
+class ConstructorPattern(ASTNode):
     name: str
-    args: list["ConstructorPattern | str"]
+    args: list["ConstructorPattern | Token"]
 
 
 @dataclass
-class ConstructorCall:
+class ConstructorCall(ASTNode):
     name: str
     args: list["Expr"]
 
 
 @dataclass
-class FunctionCall:
+class FunctionCall(ASTNode):
     name: str
     args: list["Expr"]
 
@@ -237,7 +313,7 @@ class Parser:
         axiom
         Program ::= (ADT | Func)* EOF
         """
-        p = Program([], [])
+        p = Program(1, 1, [], [])
         while True:
             t = self.peek()
             if t is None:
@@ -278,13 +354,13 @@ class Parser:
         """
         ADT ::= "type" IDENT ":" (IDENT)+ ("|" IDENT+)* "."
         """
-        self.consume("TYPE")
-        name = self.consume("IDENT").value
+        type_token = self.consume("TYPE")
+        adt_name = self.consume("IDENT").value
         self.consume("COLON")
 
-        adt = ADT(name, [])
+        adt = ADT(type_token.line, type_token.column, adt_name, [])
         while True:
-            constructor_name = self.consume("IDENT").value
+            constructor_name_token = self.consume("IDENT")
             args: list[str] = []
 
             while (c := self.peek()) is not None and c.type == "IDENT":
@@ -294,7 +370,13 @@ class Parser:
             if c is None:
                 self.report("unexpected end of file", -1, -1)
 
-            adt.constructors.append(ConstructorDecl(constructor_name, args))
+            adt.constructors.append(
+                ConstructorDecl(
+                    constructor_name_token.line,
+                      constructor_name_token.column,
+                       adt_name,
+                        constructor_name_token.value, 
+                        args))
             if c.type == "DOT":
                 self.advance()
                 break
@@ -306,7 +388,7 @@ class Parser:
         Func ::= "fun" "(" (IDENT)+ ")" "->" IDENT ":" clause ("|" clause)* "."
         """
 
-        self.consume("FUN")
+        fun_token = self.consume("FUN")
         self.consume("LEFT_PAREN")
         name = self.consume("IDENT").value
 
@@ -329,17 +411,16 @@ class Parser:
             self.advance()
             clauses.append(self.parse_clause())
         self.consume("DOT")
-        return FuncDefinition(name, args_types, return_type, clauses)
+        return FuncDefinition(fun_token.line, fun_token.column, name, args_types, return_type, clauses)
 
     def parse_clause(self):
         """
         clause ::= "(" IDENT (Pattern)* ")" "->" Expr
         """
-
-        self.consume("LEFT_PAREN")
+        start = self.consume("LEFT_PAREN")
         func_name = self.consume("IDENT").value
 
-        args: list[str | ConstructorPattern] = []
+        args: list[Token | ConstructorPattern] = []
         while (c := self.peek()) is not None and c.type != "RIGHT_PAREN":
             arg = self.parse_pattern()
             args.append(arg)
@@ -347,7 +428,7 @@ class Parser:
         self.consume("ARROW")
 
         expr = self.parse_expr()
-        clause = Clause(ClauseLHS(func_name, args), expr)
+        clause = Clause(start.line, start.column, ClauseLHS(func_name, args), expr)
         return clause
 
     def parse_expr(self) -> Expr:
@@ -373,7 +454,7 @@ class Parser:
         ConstructorCall ::= "[" IDENT (Expr)* "]"
         """
 
-        self.consume("LEFT_BRACE")
+        start = self.consume("LEFT_BRACE")
         constructor_name = self.consume("IDENT").value
 
         args: list[Expr] = []
@@ -382,14 +463,14 @@ class Parser:
             args.append(arg)
         self.consume("RIGHT_BRACE")
 
-        return ConstructorCall(constructor_name, args)
+        return ConstructorCall(start.line, start.column, constructor_name, args)
 
     def parse_func_call(self) -> FunctionCall:
         """
         FuncCall ::= "(" IDENT (Expr)* ")"
         """
 
-        self.consume("LEFT_PAREN")
+        start = self.consume("LEFT_PAREN")
         func_name = self.consume("IDENT").value
 
         args: list[Expr] = []
@@ -398,30 +479,30 @@ class Parser:
             args.append(arg)
         self.consume("RIGHT_PAREN")
 
-        return FunctionCall(func_name, args)
+        return FunctionCall(start.line, start.column, func_name, args)
 
-    def parse_pattern(self) -> str | ConstructorPattern:
+    def parse_pattern(self) -> Token | ConstructorPattern:
         """
         Pattern ::= IDENT | "[" IDENT (Pattern)* "]"
         """
 
-        c = self.peek()
-        if c is None:
+        start = self.peek()
+        if start is None:
             self.report("unexpected end of file", -1, -1)
 
-        if c.type == "IDENT":
-            return self.consume("IDENT").value
+        if start.type == "IDENT":
+            return self.consume("IDENT")
 
         self.consume("LEFT_BRACE")
         constructor_name = self.consume("IDENT").value
 
-        args: list[str | ConstructorPattern] = []
+        args: list[Token | ConstructorPattern] = []
         while (c := self.peek()) is not None and c.type != "RIGHT_BRACE":
             arg = self.parse_pattern()
             args.append(arg)
 
         self.consume("RIGHT_BRACE")
-        return ConstructorPattern(constructor_name, args)
+        return ConstructorPattern(start.line, start.column, constructor_name, args)
 
 
 if __name__ == "__main__":
