@@ -1,3 +1,6 @@
+fun (add Int Int) -> Int:
+    . 
+
 type List: Cons Int List | Nil.
 type Pair: Pair Int Int.
 type PairList: PCons Pair PairList | PNil.

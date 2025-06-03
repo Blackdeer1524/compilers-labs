@@ -1,4 +1,5 @@
 from collections import deque
+from copy import copy
 from dataclasses import dataclass
 from typing import List, Literal, Never, Optional
 
@@ -175,6 +176,7 @@ class Program(ASTNode):
             defined_adts.add(f.name)
 
         defined_functions: dict[str, FuncDefinition] = {}
+        defined_functions.update(PREAMBLE_FUNCS)
         for f in self.functions:
             if f.name in defined_functions:
                 raise NotImplementedError()
@@ -426,6 +428,12 @@ def check_expression(
             raise RuntimeError("unreachable")
 
 
+PREAMBLE_FUNCS = {
+    "add": FuncDefinition(-1, -1, "add", [INT_TYPE, INT_TYPE], INT_TYPE, []),
+    "mul": FuncDefinition(-1, -1, "mul", [INT_TYPE, INT_TYPE], INT_TYPE, []),
+}
+
+
 class Parser:
     def __init__(self, tokens: list[Token]):
         self.tokens = tokens
@@ -528,6 +536,7 @@ class Parser:
                     args,
                 )
             )
+
             if c.type == "DOT":
                 self.advance()
                 break
