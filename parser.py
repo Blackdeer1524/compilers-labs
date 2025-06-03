@@ -38,6 +38,17 @@ TOKEN_TYPE = Literal[
 ]
 
 
+INT_TYPE = "Int"
+
+
+class SemanticError(Exception):
+    def __init__(self, msg: str, line: int, column: int, *args: object) -> None:
+        super().__init__(*args)
+        self.msg = msg
+        self.line = line
+        self.column = column
+
+
 @dataclass
 class Token:
     type: TOKEN_TYPE
@@ -145,26 +156,26 @@ class ParserError(Exception):
 @dataclass
 class ASTNode:
     line: int
-    col: int
+    column: int
 
 
 @dataclass
 class Program(ASTNode):
     datatypes: list["ADT"]
     functions: list["FuncDefinition"]
-    
+
     def check(self):
         defined_adts: set[str] = set()
         for f in self.datatypes:
             if f.name in defined_adts:
                 raise NotImplementedError()
             defined_adts.add(f.name)
-        
-        defined_functions: set[str] = set()
+
+        defined_functions: dict[str, FuncDefinition] = {}
         for f in self.functions:
             if f.name in defined_functions:
                 raise NotImplementedError()
-            defined_functions.add(f.name)
+            defined_functions[f.name] = f
 
         defined_constructors: dict[str, "ConstructorDecl"] = {}
         for adt in self.datatypes:
@@ -179,15 +190,18 @@ class ADT(ASTNode):
     name: str
     constructors: list["ConstructorDecl"]
 
-    def check(self, defined_adts: set[str], defined_constructors: dict[str, "ConstructorDecl"]):
+    def check(
+        self, defined_adts: set[str], defined_constructors: dict[str, "ConstructorDecl"]
+    ):
         for c in self.constructors:
             if c.name in defined_constructors:
                 raise NotImplementedError()
             defined_constructors[c.name] = c
-            
+
             for t in c.arg_types:
                 if t not in defined_adts:
                     raise NotImplementedError()
+
 
 @dataclass
 class ConstructorDecl(ASTNode):
@@ -203,20 +217,24 @@ class FuncDefinition(ASTNode):
     return_type: str
 
     clauses: list["Clause"]
-    
-    def check(self, 
-              defined_functions: dict[str, "FuncDefinition"], 
-              defined_adts: set[str], 
-              defined_constructors: dict[str, "ConstructorDecl"]): 
+
+    def check(
+        self,
+        defined_functions: dict[str, "FuncDefinition"],
+        defined_datatypes: set[str],
+        defined_constructors: dict[str, "ConstructorDecl"],
+    ):
         for t in self.args_types:
-            if t not in defined_adts:
+            if t not in defined_datatypes:
                 raise NotImplementedError()
-        
-        if self.return_type not in defined_adts:
+
+        if self.return_type not in defined_datatypes:
             raise NotImplementedError()
 
         for clause in self.clauses:
-            clause.check()
+            clause.check(
+                self.name, defined_functions, defined_constructors, self.return_type
+            )
 
 
 @dataclass
@@ -224,36 +242,77 @@ class Clause(ASTNode):
     lhs_patters: "ClauseLHS"
     rhs: "Expr"
 
-    def check(self):
-
-
+    def check(
+        self,
+        parent_func_name: str,
+        defined_funcs: dict[str, FuncDefinition],
+        defined_constructors: dict[str, ConstructorDecl],
+        expected_return_type: str,
+    ):
+        ident2type = self.lhs_patters.check(
+            defined_funcs[parent_func_name], defined_constructors
+        )
+        return_type = check_expression(
+            self.rhs, ident2type, defined_funcs, defined_constructors
+        )
+        if return_type != expected_return_type:
+            raise SemanticError(
+                f"type mismatch. expected: {expected_return_type}. actual: {return_type}",
+                self.rhs.line,
+                self.rhs.column,
+            )
 
 
 @dataclass
-class ClauseLHS:
+class ClauseLHS(ASTNode):
     func_name: str
     args: list["ConstructorPattern | Token"]
-    
-    def check(self, 
-              func: FuncDefinition, 
-              defined_constructors: dict[str, ConstructorDecl]):
-        if self.func_name != func.name:
-            raise NotImplementedError()
 
-        defined_idents: set[str] = set()
-        d = deque(((i, t) for i, t in zip(self.args, func.args_types)))
+    def check(
+        self,
+        parent_func: FuncDefinition,
+        defined_constructors: dict[str, ConstructorDecl],
+    ) -> dict[str, str]:
+        if self.func_name != parent_func.name:
+            raise SemanticError(
+                f"expected a clause for a function `{parent_func.name}`, not `{self.func_name}`",
+                self.line,
+                self.column,
+            )
+
+        defined_idents: dict[str, str] = {}
+        d = deque(((i, t) for i, t in zip(self.args, parent_func.args_types)))
         while len(d) > 0:
             arg, expected_type = d.popleft()
             match arg:
                 case Token() as ident:
                     if ident.value in defined_idents:
                         raise NotImplementedError("identifier is already defined")
-                    defined_idents.add(ident.value)
-                case ConstructorPattern(line=line, column=col, name=name, args=args):
-                    if name not in defined_constructors:
-                        raise NotImplementedError("unknown constructor")
-                    
+                    defined_idents[ident.value] = expected_type
 
+                case ConstructorPattern(line=line, column=column, name=name, args=args):
+                    if name not in defined_constructors:
+                        raise SemanticError("unknown constructor", line, column)
+
+                    constructor_info = defined_constructors[name]
+                    if constructor_info.type != expected_type:
+                        raise SemanticError(
+                            f"constructor of unexpected type. expected: {expected_type}. actual: {constructor_info.type}",
+                            line,
+                            column,
+                        )
+
+                    if len(constructor_info.arg_types) != len(args):
+                        raise SemanticError(
+                            f"constructor {name} has a wrong number of params. expected: {len(constructor_info.arg_types)}. actual: {len(args)}",
+                            line,
+                            column,
+                        )
+
+                    for arg, expected_arg_type in zip(args, constructor_info.arg_types):
+                        d.appendleft((arg, expected_arg_type))
+
+        return defined_idents
 
 
 @dataclass
@@ -274,7 +333,75 @@ class FunctionCall(ASTNode):
     args: list["Expr"]
 
 
-Expr = FunctionCall | ConstructorCall | str | int
+Expr = FunctionCall | ConstructorCall | Token
+
+
+def check_expression(
+    e: Expr,
+    ident2type: dict[str, str],
+    defined_functions: dict[str, FuncDefinition],
+    defined_constructors: dict[str, ConstructorDecl],
+) -> str:
+    match e:
+        case FunctionCall() as call:
+            if (function_info := defined_functions.get(call.name)) is None:
+                raise SemanticError(
+                    f"unknown funciton: {call.name}",
+                    call.line,
+                    call.column,
+                )
+
+            for arg, expected_arg_type in zip(call.args, function_info.args_types):
+                arg_type = check_expression(
+                    arg, ident2type, defined_functions, defined_constructors
+                )
+                if arg_type != expected_arg_type:
+                    raise SemanticError(
+                        f"type mismatch. actual: {arg_type}. expected: {expected_arg_type}",
+                        arg.line,
+                        arg.column,
+                    )
+
+            return function_info.return_type
+        case ConstructorCall() as constructor:
+            if (constructor_info := defined_constructors.get(constructor.name)) is None:
+                raise SemanticError(
+                    f"unknown constructor: {constructor.name}",
+                    constructor.line,
+                    constructor.column,
+                )
+
+            if len(constructor.args) != len(constructor_info.arg_types):
+                raise SemanticError(
+                    f"constructor argument count mismatch. expected: {len(constructor_info.arg_types)}. actual: {len(constructor.args)}",
+                    constructor.line,
+                    constructor.column,
+                )
+
+            for arg, expected_arg_type in zip(
+                constructor.args, constructor_info.arg_types
+            ):
+                arg_type = check_expression(
+                    arg, ident2type, defined_functions, defined_constructors
+                )
+                if arg_type != expected_arg_type:
+                    raise SemanticError(
+                        f"type mismatch. actual: {arg_type}. expected: {expected_arg_type}",
+                        arg.line,
+                        arg.column,
+                    )
+
+            return constructor_info.type
+        case Token(type="IDENT") as ident:
+            if (t := ident2type.get(ident.value)) is None:
+                raise SemanticError(
+                    f"unknown ident: {ident.value}", ident.line, ident.column
+                )
+            return t
+        case Token(type="NUMBER"):
+            return INT_TYPE
+        case Token():
+            raise RuntimeError("unreachable")
 
 
 class Parser:
@@ -373,10 +500,12 @@ class Parser:
             adt.constructors.append(
                 ConstructorDecl(
                     constructor_name_token.line,
-                      constructor_name_token.column,
-                       adt_name,
-                        constructor_name_token.value, 
-                        args))
+                    constructor_name_token.column,
+                    adt_name,
+                    constructor_name_token.value,
+                    args,
+                )
+            )
             if c.type == "DOT":
                 self.advance()
                 break
@@ -411,7 +540,9 @@ class Parser:
             self.advance()
             clauses.append(self.parse_clause())
         self.consume("DOT")
-        return FuncDefinition(fun_token.line, fun_token.column, name, args_types, return_type, clauses)
+        return FuncDefinition(
+            fun_token.line, fun_token.column, name, args_types, return_type, clauses
+        )
 
     def parse_clause(self):
         """
@@ -428,7 +559,12 @@ class Parser:
         self.consume("ARROW")
 
         expr = self.parse_expr()
-        clause = Clause(start.line, start.column, ClauseLHS(func_name, args), expr)
+        clause = Clause(
+            start.line,
+            start.column,
+            ClauseLHS(start.line, start.column, func_name, args),
+            expr,
+        )
         return clause
 
     def parse_expr(self) -> Expr:
@@ -445,9 +581,9 @@ class Parser:
             return self.parse_constructor_call()
         elif c.type == "NUMBER":
             self.advance()
-            return int(c.value)
+            return c
 
-        return self.consume("IDENT").value
+        return self.consume("IDENT")
 
     def parse_constructor_call(self) -> ConstructorCall:
         """
