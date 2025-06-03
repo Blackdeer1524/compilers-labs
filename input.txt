@@ -1,6 +1,3 @@
-fun (add Int Int) -> Int:
-    . 
-
 type List: Cons Int List | Nil.
 type Pair: Pair Int Int.
 type PairList: PCons Pair PairList | PNil.
@@ -13,7 +10,7 @@ fun (zip List List) -> PairList:
 fun (cart_prod List List) -> PairList:
 
 (cart_prod [Cons x xs] ys) -> (append (bind x ys) (cart_prod xs ys)) |
-(cart_prod [Nil]) -> PNil.
+(cart_prod [Nil] ys) -> PNil.
 
 fun (bind Int List) -> PairList:
 
@@ -31,8 +28,6 @@ fun (flat ListList) -> List:
     (flat [XCons [Nil] xss]) -> (flat xss) |
     (flat [XNil]) -> [Nil].
 
-fun (add Int Int) -> Int:
-    . 
 
 fun (sum List) -> Int:
     (sum [Cons x xs]) -> (add x (sum xs)) |

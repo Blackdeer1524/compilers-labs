@@ -1,6 +1,6 @@
 from collections import deque
-from copy import copy
 from dataclasses import dataclass
+from pprint import pprint
 from typing import List, Literal, Never, Optional
 
 
@@ -170,16 +170,16 @@ class Program(ASTNode):
 
     def check(self):
         defined_adts: set[str] = set()
-        for f in self.datatypes:
-            if f.name in defined_adts:
-                raise NotImplementedError()
-            defined_adts.add(f.name)
+        for adt in self.datatypes:
+            if adt.name in defined_adts:
+                raise SemanticError(f"found ADT redefinitions: {adt.name}", adt.line, adt.column)
+            defined_adts.add(adt.name)
 
         defined_functions: dict[str, FuncDefinition] = {}
         defined_functions.update(PREAMBLE_FUNCS)
         for f in self.functions:
             if f.name in defined_functions:
-                raise NotImplementedError()
+                raise SemanticError(f"found function redefinitions: {f.name}", f.line, f.column)
             defined_functions[f.name] = f
 
         defined_constructors: dict[str, "ConstructorDecl"] = {}
@@ -235,13 +235,13 @@ class FuncDefinition(ASTNode):
     ):
         for t in self.args_types:
             if t not in defined_datatypes and t not in PREAMBLE_TYPES:
-                raise NotImplementedError()
+                raise SemanticError(f"unknown type: {t}", self.line, self.column)
 
         if (
             self.return_type not in defined_datatypes
             and self.return_type not in PREAMBLE_TYPES
         ):
-            raise NotImplementedError()
+            raise SemanticError(f"unknown return type: {self.return_type}", self.line, self.column)
 
         for clause in self.clauses:
             clause.check(
@@ -288,6 +288,13 @@ class ClauseLHS(ASTNode):
         if self.func_name != parent_func.name:
             raise SemanticError(
                 f"expected a clause for a function `{parent_func.name}`, not `{self.func_name}`",
+                self.line,
+                self.column,
+            )
+
+        if len(self.args) != len(parent_func.args_types):
+            raise SemanticError(
+                f"constructor argument count mismatch. expected: {len(parent_func.args_types)}. actual: {len(self.args)}",
                 self.line,
                 self.column,
             )
@@ -459,9 +466,7 @@ class Parser:
         if t is None:
             self.report("unexpected end of file", -1, -1)
         if t.type != expected:
-            raise ParserError(
-                f"unexpected token type: {t.type}. token: {t}", t.line, t.column
-            )
+            self.report(f"unexpected token type: {t.type}. token: {t}", t.line, t.column)
         self.advance()
         return t
 
@@ -678,6 +683,9 @@ if __name__ == "__main__":
 
     tokens = Lexer(sample).tokenize()
     (res, errs) = Parser(tokens).parse_program()
+    if len(errs) > 0:
+        pprint(errs)
+        exit(1)
 
     try:
         res.check()
@@ -686,4 +694,3 @@ if __name__ == "__main__":
         print(e.message)
         exit(1)
     # pprint(res)
-    # pprint(errs)
