@@ -1,12 +1,11 @@
 type List: Cons Int List | Nil.
 type Pair: Pair Int Int.
 type PairList: PCons Pair PairList | PNil.
-tpe ListList: XCons List ListList | XNil.
+type ListList: XCons List ListList | XNil.
 
 fun (zip List List) -> PairList:
-
-(zip [Cons x xs] [Cons x xs]) -> [PCons [Pair x y] (zip xs ys)] |
-(zip xs ys) -> [PNil].
+    (zip [Cons x xs] [Cons y ys]) -> [PCons [Pair x y] (zip xs ys)] |
+    (zip xs ys) -> [PNil].
 
 fun (cart_prod List List) -> PairList:
 
@@ -25,15 +24,16 @@ fun (append PairList PairList) -> PairList:
 (append [PNil] ys) -> ys.
 
 fun (flat ListList) -> List:
+    (flat [XCons [Cons x xs] xss]) -> [Cons x (flat [XCons xs xss])] |
+    (flat [XCons [Nil] xss]) -> (flat xss) |
+    (flat [XNil]) -> [Nil].
 
-(flat [XCons [Cons x xs] xss]) -> [Cons x (flat [XCons xs xss])] |
-(flat [XCons [Nil] xss]) -> (flat xss) |
-(flat [XNil]) -> [Nil].
+fun (add Int Int) -> Int:
+    . 
 
 fun (sum List) -> Int:
-
-(sum [Cons x xs]) -> (add x (sum xs)) |
-(sum [Nil]) -> 0.
+    (sum [Cons x xs]) -> (add x (sum xs)) |
+    (sum [Nil]) -> 0.
 
 fun (polynom Int List) -> Int:
 

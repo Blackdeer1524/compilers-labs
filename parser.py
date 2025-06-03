@@ -1,6 +1,5 @@
 from collections import deque
 from dataclasses import dataclass
-from pprint import pprint
 from typing import List, Literal, Never, Optional
 
 
@@ -37,8 +36,8 @@ TOKEN_TYPE = Literal[
     "EOF",
 ]
 
-
 INT_TYPE = "Int"
+PREAMBLE_TYPES = (INT_TYPE,)
 
 
 class SemanticError(Exception):
@@ -47,6 +46,10 @@ class SemanticError(Exception):
         self.msg = msg
         self.line = line
         self.column = column
+
+    @property
+    def message(self):
+        return f"[{self.line}:{self.column}] {self.msg}"
 
 
 @dataclass
@@ -191,23 +194,27 @@ class ADT(ASTNode):
     constructors: list["ConstructorDecl"]
 
     def check(
-        self, defined_adts: set[str], defined_constructors: dict[str, "ConstructorDecl"]
+        self,
+        defined_datatypes: set[str],
+        defined_constructors: dict[str, "ConstructorDecl"],
     ):
         for c in self.constructors:
             if c.name in defined_constructors:
-                raise NotImplementedError()
+                raise SemanticError("unknown constructor", c.line, c.column)
             defined_constructors[c.name] = c
 
             for t in c.arg_types:
-                if t not in defined_adts:
-                    raise NotImplementedError()
+                if t.value not in defined_datatypes and t.value not in PREAMBLE_TYPES:
+                    raise SemanticError(
+                        f"unknown arg type: `{t.value}`", t.line, t.column
+                    )
 
 
 @dataclass
 class ConstructorDecl(ASTNode):
     type: str
     name: str
-    arg_types: list[str]
+    arg_types: list[Token]
 
 
 @dataclass
@@ -225,10 +232,13 @@ class FuncDefinition(ASTNode):
         defined_constructors: dict[str, "ConstructorDecl"],
     ):
         for t in self.args_types:
-            if t not in defined_datatypes:
+            if t not in defined_datatypes and t not in PREAMBLE_TYPES:
                 raise NotImplementedError()
 
-        if self.return_type not in defined_datatypes:
+        if (
+            self.return_type not in defined_datatypes
+            and self.return_type not in PREAMBLE_TYPES
+        ):
             raise NotImplementedError()
 
         for clause in self.clauses:
@@ -287,7 +297,9 @@ class ClauseLHS(ASTNode):
             match arg:
                 case Token() as ident:
                     if ident.value in defined_idents:
-                        raise NotImplementedError("identifier is already defined")
+                        raise SemanticError(
+                            "identifier is already defined", ident.line, ident.column
+                        )
                     defined_idents[ident.value] = expected_type
 
                 case ConstructorPattern(line=line, column=column, name=name, args=args):
@@ -309,8 +321,10 @@ class ClauseLHS(ASTNode):
                             column,
                         )
 
-                    for arg, expected_arg_type in zip(args, constructor_info.arg_types):
-                        d.appendleft((arg, expected_arg_type))
+                    for arg, expected_arg_type in reversed(
+                        list(zip(args, constructor_info.arg_types))
+                    ):
+                        d.appendleft((arg, expected_arg_type.value))
 
         return defined_idents
 
@@ -379,7 +393,7 @@ def check_expression(
                 )
 
             for arg, expected_arg_type in zip(
-                constructor.args, constructor_info.arg_types
+                constructor.args, (t.value for t in constructor_info.arg_types)
             ):
                 arg_type = check_expression(
                     arg, ident2type, defined_functions, defined_constructors
@@ -394,9 +408,17 @@ def check_expression(
             return constructor_info.type
         case Token(type="IDENT") as ident:
             if (t := ident2type.get(ident.value)) is None:
-                raise SemanticError(
-                    f"unknown ident: {ident.value}", ident.line, ident.column
-                )
+                if (t := defined_constructors.get(ident.value)) is None:
+                    raise SemanticError(
+                        f"unknown ident: {ident.value}", ident.line, ident.column
+                    )
+                if len(t.arg_types) != 0:
+                    raise SemanticError(
+                        f"invalid use of constructor {ident.value}",
+                        ident.line,
+                        ident.column,
+                    )
+                return t.type
             return t
         case Token(type="NUMBER"):
             return INT_TYPE
@@ -488,11 +510,11 @@ class Parser:
         adt = ADT(type_token.line, type_token.column, adt_name, [])
         while True:
             constructor_name_token = self.consume("IDENT")
-            args: list[str] = []
+            args: list[Token] = []
 
             while (c := self.peek()) is not None and c.type == "IDENT":
                 self.advance()
-                args.append(c.value)
+                args.append(c)
 
             if c is None:
                 self.report("unexpected end of file", -1, -1)
@@ -647,5 +669,12 @@ if __name__ == "__main__":
 
     tokens = Lexer(sample).tokenize()
     (res, errs) = Parser(tokens).parse_program()
-    pprint(res)
-    pprint(errs)
+
+    try:
+        res.check()
+        print("OK")
+    except SemanticError as e:
+        print(e.message)
+        exit(1)
+    # pprint(res)
+    # pprint(errs)
