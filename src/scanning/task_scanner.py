@@ -110,13 +110,13 @@ class Scanner:
                 start_p = self._text.position()
                 self._text.advance()
                 end_p = self._text.position()
-                yield Keyword("-", start=start_p, end=end_p)
+                yield Keyword("*", start=start_p, end=end_p)
             elif cur.isdigit():
                 errored = False
                 start_p = self._text.position()
                 val = 0
                 while True:
-                    val += int(cur)
+                    val = val * 10 + int(cur)
                     self._text.advance()
                     cur = self._text.peek()
                     if cur is None or not cur.isdigit():
