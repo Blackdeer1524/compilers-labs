@@ -2,7 +2,7 @@ class Stream:
     def __init__(self, tab_width: int = 4):
         self.tab_width = tab_width
         self.reset()
-    
+
     def reset(self):
         self.txt = ""
         self.indent_level = 0
@@ -17,7 +17,7 @@ class Stream:
         self.is_str_start = True
         return self
 
-    def push_line(self, s: str) -> "Stream":
+    def push_line(self, s: str="") -> "Stream":
         if self.is_str_start:
             self.txt += self.tab_width * self.indent_level * " "
             self.is_str_start = False
@@ -29,3 +29,17 @@ class Stream:
         res = self.txt
         self.reset()
         return res
+
+    def indent(self):
+        class Indenter:
+            def __init__(self, stream: Stream):
+                self._stream = stream
+
+            def __enter__(self):
+                self._stream.indent_level += 1
+                return self._stream
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                self._stream.indent_level -= 1
+
+        return Indenter(self)

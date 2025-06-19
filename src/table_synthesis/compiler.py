@@ -16,10 +16,10 @@ from src.common.abc import IGraphVizible
 from src.common.pretty import wrap
 from src.text.processors import Position
 
-from src.scanning.custom_scanner import Token
+from src.scanning.task_scanner import Token
 
 # every scanner has to provide
-from src.scanning.custom_scanner import Keyword
+from src.scanning.task_scanner import Keyword
 
 # Token types:
 {}
@@ -86,39 +86,41 @@ def generate_imports(ss: Stream, token_types: set[str]):
 
     ss.push_line(
         IMPORT_SECTION.format(
-            "from src.scanning.custom_scanner import {}".format(", ".join(token_types))
+            "from src.scanning.task_scanner import {}".format(", ".join(token_types))
         )
     )
 
 
 def generate_term_node(token_type: str) -> str:
     node_name = f"{token_type}Node"
-    value_type = "Optional[{}]".format(token_type)
 
-    return (
-        """\
-@dataclass
-class {}(IASTNode):
-    value: {} = None
-""".format(
-            node_name, value_type
-        )
-        + """
+    ss = Stream()
+    ss.push_line("@dataclass")
+    with ss.push_line(f"class {node_name}(IASTNode):").indent() as class_body:
+        class_body.push_line(f"value: Optional[{token_type}] = None")
+        class_body.push_line()
+        with class_body.push_line(
+            "def to_graphviz(self) -> str:"
+        ).indent() as to_graphviz:
+            to_graphviz.push_line("res = super().to_graphviz()")
+            with to_graphviz.push_line("match self.value:").indent() as match_stmt:
+                with match_stmt.push_line("case None:").indent() as case_none:
+                    case_none.push_line("""epsilon_name = f"𝓔{id(self)}" """).push_line(
+                        """res += f'\\t{epsilon_name} [label="𝓔"]\\n' """
+                    ).push_line(
+                        """res += f"{self.node_name} -> {epsilon_name}" """
+                    ).push_line(
+                        "return res"
+                    )
+                with match_stmt.push_line("case _:").indent() as case_other:
+                    case_other.push_line(
+                        """res += self.value.to_graphviz()"""
+                    ).push_line(
+                        """res += f"\\t{self.node_name} -> {self.value.node_name}\\n" """
+                    )
+                    case_other.push_line("return res")
 
-    def to_graphviz(self) -> str:
-        res = super().to_graphviz()
-        match self.value:
-            case None:
-                epsilon_name = f"𝓔{id(self)}"
-                res += f'\\t{epsilon_name} [label="𝓔"]\\n'
-                res += f"{self.node_name} -> {epsilon_name}"
-                return res
-            case _:
-                res += self.value.to_graphviz()
-                res += f"\\t{self.node_name} -> {self.value.node_name}\\n"
-        return res
-"""
-    )
+    return ss.emit()
 
 
 def generate_keyword_node(name: str) -> str:
@@ -131,7 +133,7 @@ class {}(IASTNode):
 """.format(
             node_name
         )
-        + """
+        + """\
     value: Optional["Keyword"] = None
 
     def to_graphviz(self) -> str:
@@ -152,41 +154,44 @@ class {}(IASTNode):
 
 def generate_nonterm_node(name: str, rules: list[list[str]]) -> str:
     types: list[str] = []
+    has_long_rule = True
     for rule in rules:
+        has_long_rule = has_long_rule and len(rule) > 1
         s = "tuple[{}]".format(", ".join(map(lambda name: f'"{name}Node"', rule)))
         types.append(s)
 
     node_name = f"{name}Node"
     value_type = "Optional[{}]".format("|".join(types))
 
-    return (
-        """\
-@dataclass
-class {}(IASTNode):
-    value: {} = None
-""".format(
-            node_name, value_type
-        )
-        + """
-    def to_graphviz(self) -> str:
-        res = super().to_graphviz()
-        match self.value:
-            case None:
-                epsilon_name = f"𝓔{id(self)}"
-                res += f'\\t{epsilon_name} [label="𝓔"]\\n'
-                res += f"\\t{self.node_name} -> {epsilon_name}\\n"
-            case tuple():
-                res += "".join(child.to_graphviz() for child in self.value)
-                res += "".join(
-                    f"\\t{self.node_name} -> {child.node_name}\\n" for child in self.value
-                )
-                if len(self.value) > 1:
-                    res += "\\t{{rank=same; {} [style=invis]}}\\n".format(
-                        " -> ".join(child.node_name for child in self.value)
-                    )
-        return res
-"""
-    )
+    ss = Stream()
+    ss.push_line("@dataclass")
+    ss.push_line(f"class {node_name}(IASTNode):")
+    with ss.indent() as class_body:
+        class_body.push_line(f"value: {value_type} = None")
+        class_body.push_line()
+
+        with class_body.push_line( "def to_graphviz(self) -> str:").indent() as to_graphviz_body:
+            to_graphviz_body.push_line("res = super().to_graphviz()")
+            with to_graphviz_body.push_line("match self.value:").indent() as match_stmt:
+                with match_stmt.push_line("case None:").indent() as none_case:
+                    none_case.push_line("""epsilon_name = f"𝓔{id(self)}" """)
+                    none_case.push_line( """res += f'\\t{epsilon_name} [label="𝓔"]\\n' """)
+                    none_case.push_line( """res += f"\\t{self.node_name} -> {epsilon_name}\\n" """)
+                with match_stmt.push_line("case tuple():").indent() as tuple_case:
+                    tuple_case.push_line( """res += "".join(child.to_graphviz() for child in self.value) """)
+                    tuple_case.push_line("""res += "".join( """)
+                    with tuple_case.indent():
+                        tuple_case.push_line( """f"\\t{self.node_name} -> {child.node_name}\\n" for child in self.value """)
+                    tuple_case.push_line(")")
+
+                    if has_long_rule:
+                        with tuple_case.push_line( "if len(self.value) > 1:").indent() as cond:
+                            cond.push_line( """res += "\\t{{rank=same; {} [style=invis]}}\\n".format(""")
+                            with cond.indent():
+                                cond.push_line( """" -> ".join(child.node_name for child in self.value)""")
+                            cond.push_line(")")
+            to_graphviz_body.push_line("return res")
+    return ss.emit()
 
 
 IAST_DECL = """\
@@ -317,21 +322,23 @@ def generate_transitions(
                                         f"{name_transformer( value[len(DIRECTIVE_PREFIX):])}Node(),"
                                     )
                                 else:
-                                    ss.push_line(f"Keyword{name_transformer( value)}Node(),")
+                                    ss.push_line(
+                                        f"Keyword{name_transformer( value)}Node(),"
+                                    )
 
                     ss.adjust_indent_level(-1)
                     ss.push_line(")").endl()
                     ss.push_line("current.value = res")
                     ss.push_line("current.pos = token.start")
                     ss.push_line("return list(res)")
- 
+
             ss.adjust_indent_level(-1)
-        
-        ss.push_line(f'case Keyword(value=unexpected):')
+
+        ss.push_line(f"case Keyword(value=unexpected):")
         ss.adjust_indent_level(1)
         ss.push_line("""return f"unknown keyword: {unexpected}" """)
         ss.adjust_indent_level(-1)
-        
+
         ss.adjust_indent_level(-2)
 
     for token_type in token_types:
@@ -358,7 +365,7 @@ def generate_transitions(
         ss.push_line(f"""if type(token) != Keyword or token.value != "{keyword}":""")
         ss.adjust_indent_level(+1)
         ss.push_line(
-            """return f"expected {}""".format(keyword) + """, {token} found" """
+            """return "expected {}""".format(keyword) + """, {} found".format(token) """
         )
         ss.adjust_indent_level(-1)
 
@@ -366,6 +373,6 @@ def generate_transitions(
         ss.push_line("current.pos = token.start")
         ss.push_line("return None")
 
-        ss.adjust_indent_level(-1) 
+        ss.adjust_indent_level(-1)
 
     ss.adjust_indent_level(-1)

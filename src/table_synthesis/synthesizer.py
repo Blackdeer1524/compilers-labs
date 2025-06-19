@@ -30,9 +30,9 @@ def render_table(table: LL1_TABLE_T) -> str:
         res += f"{key}|"
     res += "\n"
 
-    res += "|---|"
+    res += "|-|"
     for key in keys:
-        res += "---|"
+        res += "-|"
     res += "\n"
 
     for nt, row in table.items():
@@ -40,7 +40,7 @@ def render_table(table: LL1_TABLE_T) -> str:
         for key in keys:
             rule = row[key]
             if rule is None:
-                res += f"---|"
+                res += f"-|"
             elif len(rule) == 0:
                 res += f"𝓔|"
             else:
