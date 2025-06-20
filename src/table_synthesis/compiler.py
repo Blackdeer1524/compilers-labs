@@ -42,7 +42,7 @@ def name_transformer(s: str) -> str:
         "@": "At",
         "!": "Bang",
         "?": "Question",
-        "-": "Dash",
+        "-": "Minus",
         "+": "Plus",
         "=": "Equals",
         "/": "Slash",
@@ -152,16 +152,21 @@ class {}(IASTNode):
     )
 
 
+def generate_node_name(name: str):
+    return f'{name}Node'
+
 def generate_nonterm_node(name: str, rules: list[list[str]]) -> str:
     types: list[str] = []
-    has_long_rule = True
+    has_long_rule = False
+    has_short_rule = False
     for rule in rules:
-        has_long_rule = has_long_rule and len(rule) > 1
-        s = "tuple[{}]".format(", ".join(map(lambda name: f'"{name}Node"', rule)))
+        has_long_rule = has_long_rule or len(rule) > 1
+        has_short_rule = has_short_rule or len(rule) == 1 
+        s = "tuple[{}]".format(", ".join(map(generate_node_name, rule))) if len(rule) > 1 else generate_node_name(rule[0])
         types.append(s)
 
     node_name = f"{name}Node"
-    value_type = "Optional[{}]".format("|".join(types))
+    value_type = 'Optional["{}"]'.format("|".join(types))
 
     ss = Stream()
     ss.push_line("@dataclass")
@@ -177,19 +182,23 @@ def generate_nonterm_node(name: str, rules: list[list[str]]) -> str:
                     none_case.push_line("""epsilon_name = f"𝓔{id(self)}" """)
                     none_case.push_line( """res += f'\\t{epsilon_name} [label="𝓔"]\\n' """)
                     none_case.push_line( """res += f"\\t{self.node_name} -> {epsilon_name}\\n" """)
-                with match_stmt.push_line("case tuple():").indent() as tuple_case:
-                    tuple_case.push_line( """res += "".join(child.to_graphviz() for child in self.value) """)
-                    tuple_case.push_line("""res += "".join( """)
-                    with tuple_case.indent():
-                        tuple_case.push_line( """f"\\t{self.node_name} -> {child.node_name}\\n" for child in self.value """)
-                    tuple_case.push_line(")")
+                if has_long_rule:
+                    with match_stmt.push_line("case tuple():").indent() as tuple_case:
+                        tuple_case.push_line( """res += "".join(child.to_graphviz() for child in self.value) """)
+                        tuple_case.push_line("""res += "".join( """)
+                        with tuple_case.indent():
+                            tuple_case.push_line( """f"\\t{self.node_name} -> {child.node_name}\\n" for child in self.value """)
+                        tuple_case.push_line(")")
 
-                    if has_long_rule:
-                        with tuple_case.push_line( "if len(self.value) > 1:").indent() as cond:
-                            cond.push_line( """res += "\\t{{rank=same; {} [style=invis]}}\\n".format(""")
-                            with cond.indent():
-                                cond.push_line( """" -> ".join(child.node_name for child in self.value)""")
-                            cond.push_line(")")
+                        tuple_case.push_line("assert len(self.value) > 1")
+                        tuple_case.push_line( """res += "\\t{{rank=same; {} [style=invis]}}\\n".format(""")
+                        with tuple_case.indent():
+                            tuple_case.push_line( """" -> ".join(child.node_name for child in self.value)""")
+                        tuple_case.push_line(")")
+                if has_short_rule:
+                    with match_stmt.push_line("case _:").indent() as other_case:
+                        other_case.push_line( """res += self.value.to_graphviz()""")
+                        other_case.push_line( """res += f"\\t{self.node_name} -> {self.value.node_name}\\n" """)
             to_graphviz_body.push_line("return res")
     return ss.emit()
 
@@ -280,99 +289,89 @@ def generate_transitions(
     generate_imports(ss, token_types)
     generate_nodes(ss, infos, token_types, keywords)
 
-    ss.push_line("def transitions(")
-    ss.adjust_indent_level(+1)
-    ss.push_line("current: NON_TERMINAL | TERMINAL, token: Token")
-    ss.adjust_indent_level(-1)
+    with ss.push_line("def transitions(").indent() as transitions_decl:
+        transitions_decl.push_line("current: NON_TERMINAL | TERMINAL, token: Token")
     ss.push_line(") -> list[NON_TERMINAL | TERMINAL] | str | None:")
-    ss.adjust_indent_level(+1)
+    
+    with ss.indent() as func_body:
+        with func_body.push_line("match current:").indent() as symbol_match:
+            for nonterm, transitions in table.items():
+                with symbol_match.push_line(f"case {generate_node_name(nonterm)}():").indent() as case_nonterm:
+                    with case_nonterm.push_line(f"match token:").indent() as token_match:
+                        for symbol, rule in transitions.items():
+                            if symbol.startswith(DIRECTIVE_PREFIX):
+                                token_domain = symbol[len(DIRECTIVE_PREFIX) :]
+                                token_match.push_line(f"case {token_domain}():")
+                            else:
+                                token_match.push_line(f'case Keyword(value="{symbol}"):')
 
-    ss.push_line("match current:")
-    ss.adjust_indent_level(+1)
-    for nonterm, transitions in table.items():
-        ss.push_line(f"case {nonterm}Node():")
-        ss.adjust_indent_level(+1)
-        ss.push_line(f"match token:")
-        ss.adjust_indent_level(+1)
+                            with token_match.indent() as case_body:
+                                match rule:
+                                    case None:
+                                        case_body.push_line("""return f"unexpected token: {token}" """)
+                                    case list([]):
+                                        case_body.push_line("current.pos = token.start")
+                                        case_body.push_line("return []")
+                                    case list() if len(rule) > 1:
+                                        with case_body.push_line("res = (").indent() as res_indent:
+                                            for item in rule:
+                                                match item:
+                                                    case Ident(value=value):
+                                                        res_indent.push_line(f"{generate_node_name(value)}(),")
+                                                    case QuotedStr(value=value):
+                                                        if value.startswith(DIRECTIVE_PREFIX):
+                                                            res_indent.push_line(
+                                                                f"{generate_node_name(name_transformer( value[len(DIRECTIVE_PREFIX):]))}(),"
+                                                            )
+                                                        else:
+                                                            res_indent.push_line(
+                                                                f"Keyword{generate_node_name(name_transformer( value))}(),"
+                                                            )
+                                        case_body.push_line(")").endl()
+                                        case_body.push_line("current.value = res")
+                                        case_body.push_line("current.pos = token.start")
+                                        case_body.push_line("return list(res)")
+                                    case list():
+                                        item = rule[0]
+                                        match item:
+                                            case Ident(value=value):
+                                                case_body.push_line(f"res = {generate_node_name(value)}()")
+                                            case QuotedStr(value=value):
+                                                if value.startswith(DIRECTIVE_PREFIX):
+                                                    case_body.push_line(
+                                                        f"res = {generate_node_name(name_transformer( value[len(DIRECTIVE_PREFIX):]))}()"
+                                                    )
+                                                else:
+                                                    case_body.push_line(
+                                                        f"res = Keyword{generate_node_name(name_transformer( value))}()"
+                                                    )
+                                        
+                                        case_body.push_line("current.value = res")
+                                        case_body.push_line("current.pos = token.start")
+                                        case_body.push_line("return [res]")
 
-        for symbol, rule in transitions.items():
-            if symbol.startswith(DIRECTIVE_PREFIX):
-                token_domain = symbol[len(DIRECTIVE_PREFIX) :]
-                ss.push_line(f"case {token_domain}():")
-            else:
-                ss.push_line(f'case Keyword(value="{symbol}"):')
+                        with token_match.push_line(f"case Keyword(value=unexpected):").indent() as case_body:
+                            case_body.push_line("""return f"unknown keyword: {unexpected}" """)
 
-            ss.adjust_indent_level(+1)
-            match rule:
-                case None:
-                    ss.push_line("""return f"unexpected token: {token}" """)
-                case list([]):
-                    ss.push_line("current.pos = token.start")
-                    ss.push_line("return []")
-                case list():
-                    ss.push_line("res = (")
-                    ss.adjust_indent_level(+1)
-                    for item in rule:
-                        match item:
-                            case Ident(value=value):
-                                ss.push_line(f"{value}Node(),")
-                            case QuotedStr(value=value):
-                                if value.startswith(DIRECTIVE_PREFIX):
-                                    ss.push_line(
-                                        f"{name_transformer( value[len(DIRECTIVE_PREFIX):])}Node(),"
-                                    )
-                                else:
-                                    ss.push_line(
-                                        f"Keyword{name_transformer( value)}Node(),"
-                                    )
+            for token_type in token_types:
+                with ss.push_line(f"case {generate_node_name(token_type)}():").indent() as case_term:
+                    with case_term.push_line("if type(token) != {}:".format(token_type)).indent() as token_type_assertion:
+                        token_type_assertion.push_line(
+                            """return f"expected {}""".format(token_type)
+                            + """, but {type(token)} found" """
+                        )
 
-                    ss.adjust_indent_level(-1)
-                    ss.push_line(")").endl()
-                    ss.push_line("current.value = res")
-                    ss.push_line("current.pos = token.start")
-                    ss.push_line("return list(res)")
+                    case_term.push_line("current.value = token")
+                    case_term.push_line("current.pos = token.start")
+                    case_term.push_line("return None")
 
-            ss.adjust_indent_level(-1)
+            for keyword in keywords:
+                with ss.push_line(f"case Keyword{generate_node_name( name_transformer(keyword))}():").indent() as case_keyword:
+                    with case_keyword.push_line(f"""if type(token) != Keyword or token.value != "{keyword}":""").indent() as token_type_assertion:
+                        token_type_assertion.push_line(
+                            """return "expected {}""".format(keyword) + """, {} found".format(token) """
+                        )
 
-        ss.push_line(f"case Keyword(value=unexpected):")
-        ss.adjust_indent_level(1)
-        ss.push_line("""return f"unknown keyword: {unexpected}" """)
-        ss.adjust_indent_level(-1)
-
-        ss.adjust_indent_level(-2)
-
-    for token_type in token_types:
-        ss.push_line(f"case {token_type}Node():")
-        ss.adjust_indent_level(+1)
-
-        ss.push_line("if type(token) != {}:".format(token_type))
-        ss.adjust_indent_level(+1)
-        ss.push_line(
-            """return f"expected {}""".format(token_type)
-            + """, but {type(token)} found" """
-        )
-        ss.adjust_indent_level(-1)
-
-        ss.push_line("current.value = token")
-        ss.push_line("current.pos = token.start")
-        ss.push_line("return None")
-        ss.adjust_indent_level(-1)
-
-    for keyword in keywords:
-        ss.push_line(f"case Keyword{name_transformer(keyword)}Node():")
-        ss.adjust_indent_level(+1)
-
-        ss.push_line(f"""if type(token) != Keyword or token.value != "{keyword}":""")
-        ss.adjust_indent_level(+1)
-        ss.push_line(
-            """return "expected {}""".format(keyword) + """, {} found".format(token) """
-        )
-        ss.adjust_indent_level(-1)
-
-        ss.push_line("current.value = token")
-        ss.push_line("current.pos = token.start")
-        ss.push_line("return None")
-
-        ss.adjust_indent_level(-1)
-
-    ss.adjust_indent_level(-1)
+                    case_keyword.push_line("current.value = token")
+                    case_keyword.push_line("current.pos = token.start")
+                    case_keyword.push_line("return None")
