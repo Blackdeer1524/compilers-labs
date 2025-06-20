@@ -1,0 +1,20 @@
+`axiom Production   `is Axiom NonTerm "`is" Rule RuleAlt "`end" Production 
+                    `or `epsilon `end
+
+Rule        `is Term RuleTail 
+            `or NonTerm RuleTail 
+            `or "`epsilon" `end
+
+RuleTail    `is Term RuleTail 
+            `or NonTerm RuleTail 
+            `or `epsilon `end
+
+RuleAlt     `is "`or" Rule RuleAlt
+            `or `epsilon `end
+
+Axiom       `is "`axiom"
+            `or `epsilon `end
+
+NonTerm `is "#Ident" `end
+
+Term    `is "#QuotedStr" `end
